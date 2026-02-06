@@ -15,9 +15,18 @@
             <div class="d-flex justify-content-between align-items-center w-100">
                 <a class="navbar-brand" href="../index.html">AdSafe</a>
                 <div class="d-flex align-items-center gap-3">
-                    <a href="../index.html" class="nav-link text-decoration-none">대시보드</a>
-                    <span class="text-muted">|</span>
-                    <span class="text-primary fw-bold">어드민 콘솔</span>
+                    <span class="text-primary fw-bold me-2">어드민 콘솔</span>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-custom btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" id="nav-user-btn">
+                            <i class="bi bi-person-circle me-1"></i><span id="nav-user-label">사용자</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="../index.html">메인으로</a></li>
+                            <li><a class="dropdown-item" href="../account.html">계정 설정</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="../login.html" id="nav-logout">로그아웃</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -35,7 +44,7 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="taxonomy.html">
-                            <i class="bi bi-diagram-3 me-2"></i>리스크 택소노미
+                            <i class="bi bi-diagram-3 me-2"></i>리스크 유형 관리
                         </a>
                     </li>
                     <li class="nav-item">
@@ -65,7 +74,7 @@
                     </div>
                     <div class="d-flex gap-2">
                         <select class="form-select form-control-custom" id="rules-version-select" style="width: auto;">
-                            <!-- js에서 ADU_RULE_SET_VERSIONS 기반 채움 -->
+                            <option value="">버전 선택</option>
                         </select>
                         <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addRuleModal">
                             <i class="bi bi-plus-circle me-2"></i>룰 추가
@@ -80,7 +89,6 @@
                             <label class="form-label">리스크 코드</label>
                             <select class="form-select form-control-custom" id="filter-risk-code">
                                 <option value="">전체</option>
-                                <!-- js에서 ADU_RULES 기반 채움 -->
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -89,6 +97,7 @@
                                 <option value="">전체</option>
                                 <option value="keyword">keyword</option>
                                 <option value="regex">regex</option>
+                                <option value="numeric">numeric</option>
                                 <option value="combo">combo</option>
                             </select>
                         </div>
@@ -123,7 +132,7 @@
                                 </tr>
                             </thead>
                             <tbody id="rules-tbody">
-                                <!-- js/rules-data.js(ADU_RULES) 기반 동적 렌더링 -->
+                                <tr><td colspan="7" class="text-center py-4 text-muted">불러오는 중...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -132,7 +141,7 @@
         </div>
     </div>
 
-    <!-- 룰 추가/수정 모달 -->
+    <!-- 룰 추가 모달 -->
     <div class="modal fade" id="addRuleModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -141,7 +150,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form>
+                    <form id="addRuleForm">
                         <div class="mb-3">
                             <label for="rule-name" class="form-label">룰명</label>
                             <input type="text" class="form-control form-control-custom" id="rule-name" required>
@@ -150,7 +159,7 @@
                             <div class="col-md-6 mb-3">
                                 <label for="rule-risk-code" class="form-label">리스크 코드</label>
                                 <select class="form-select form-control-custom" id="rule-risk-code">
-                                    <!-- js에서 ADU_RULES 기반 채움 -->
+                                    <option value="">선택하세요</option>
                                 </select>
                             </div>
                             <div class="col-md-6 mb-3">
@@ -172,7 +181,7 @@
                                 <label for="rule-severity" class="form-label">위험도</label>
                                 <select class="form-select form-control-custom" id="rule-severity">
                                     <option value="low">낮음</option>
-                                    <option value="medium">보통</option>
+                                    <option value="medium" selected>보통</option>
                                     <option value="high">높음</option>
                                 </select>
                             </div>
@@ -192,12 +201,13 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-custom" data-bs-dismiss="modal">취소</button>
-                    <button type="button" class="btn btn-primary-custom">저장</button>
+                    <button type="button" class="btn btn-primary-custom" id="btn-add-rule">저장</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- 룰 수정 모달 -->
     <div class="modal fade" id="editRuleModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -207,9 +217,10 @@
                 </div>
                 <div class="modal-body">
                     <form id="editRuleForm">
+                        <input type="hidden" id="edit-rule-id">
                         <div class="mb-3">
-                            <label class="form-label">판정단위(룰명)</label>
-                            <input type="text" class="form-control form-control-custom" id="edit-rule-level3" readonly>
+                            <label class="form-label">룰명</label>
+                            <input type="text" class="form-control form-control-custom" id="edit-rule-name">
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -217,34 +228,38 @@
                                 <input type="text" class="form-control form-control-custom" id="edit-rule-riskCode" readonly>
                             </div>
                             <div class="col-md-6 mb-3">
+                                <label class="form-label">룰 유형</label>
+                                <select class="form-select form-control-custom" id="edit-rule-type">
+                                    <option value="keyword">keyword</option>
+                                    <option value="regex">regex</option>
+                                    <option value="numeric">numeric</option>
+                                    <option value="combo">combo</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">패턴</label>
+                            <textarea class="form-control form-control-custom" id="edit-rule-pattern" rows="3"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
                                 <label class="form-label">위험도</label>
-                                <select class="form-select form-control-custom" id="edit-rule-riskLevel">
+                                <select class="form-select form-control-custom" id="edit-rule-severity">
                                     <option value="low">낮음</option>
                                     <option value="medium">보통</option>
                                     <option value="high">높음</option>
                                 </select>
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">대분류</label>
-                                <input type="text" class="form-control form-control-custom" id="edit-rule-level1">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">중분류</label>
-                                <input type="text" class="form-control form-control-custom" id="edit-rule-level2">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">판정단위</label>
-                                <input type="text" class="form-control form-control-custom" id="edit-rule-level3-edit">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">활성화</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="edit-rule-active">
+                                    <label class="form-check-label" for="edit-rule-active">활성</label>
+                                </div>
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">키워드 (쉼표 구분)</label>
-                            <textarea class="form-control form-control-custom" id="edit-rule-keywords" rows="2" placeholder="최고, 최상, 유일"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">설명</label>
+                            <label class="form-label">설명 템플릿</label>
                             <textarea class="form-control form-control-custom" id="edit-rule-explanation" rows="2"></textarea>
                         </div>
                         <div class="mb-3">
@@ -255,7 +270,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-custom" data-bs-dismiss="modal">취소</button>
-                    <button type="button" class="btn btn-primary-custom" id="editRuleSave">저장</button>
+                    <button type="button" class="btn btn-primary-custom" id="btn-edit-rule">저장</button>
                 </div>
             </div>
         </div>
@@ -268,32 +283,15 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../js/rules-data.js"></script>
-    <script src="../js/rule-set-versions.js"></script>
+    <script src="../js/auth.js"></script>
     <script src="../main.js"></script>
     <script>
 (function() {
-    var riskLevelLabel = { high: '높음', medium: '보통', low: '낮음' };
-    var riskLevelBadge = { high: 'badge-high', medium: 'badge-medium', low: 'badge-low' };
-
-    function getRuleType(rule) {
-        var hasKeywords = rule.keywords && rule.keywords.length > 0;
-        var hasRegex = rule.regex && rule.regex.length > 0;
-        if (hasKeywords && hasRegex) return { type: 'combo', badge: 'bg-secondary' };
-        if (hasRegex) return { type: 'regex', badge: 'bg-warning' };
-        return { type: 'keyword', badge: 'bg-info' };
-    }
-
-    function getPatternPreview(rule) {
-        var parts = [];
-        if (rule.keywords && rule.keywords.length) parts.push(rule.keywords.slice(0, 5).join(', ') + (rule.keywords.length > 5 ? '…' : ''));
-        if (rule.regex && rule.regex.length) parts.push(rule.regex.slice(0, 2).join(' / ') + (rule.regex.length > 2 ? '…' : ''));
-        return parts.join(' | ') || '-';
-    }
-
-    function getRuleName(rule) {
-        return rule.level3 || (rule.level1 + ' - ' + rule.level2) || rule.riskCode;
-    }
+    var apiBase = (window.ADSAFE_API_URL || '').replace(/\/$/, '');
+    var ngrokHeaders = { 'ngrok-skip-browser-warning': 'true' };
+    var tbody = document.getElementById('rules-tbody');
+    var currentVersionId = null;
+    var taxonomyList = [];
 
     function escapeHtml(s) {
         if (s == null) return '';
@@ -302,128 +300,332 @@
         return div.innerHTML;
     }
 
-    function getFilteredRules() {
-        if (!window.ADU_RULES || !Array.isArray(window.ADU_RULES)) return [];
-        var list = window.ADU_RULES.slice();
-        var riskCode = document.getElementById('filter-risk-code') && document.getElementById('filter-risk-code').value;
-        var type = document.getElementById('filter-type') && document.getElementById('filter-type').value;
-        var level = document.getElementById('filter-level') && document.getElementById('filter-level').value;
-        if (riskCode) list = list.filter(function(r) { return r.riskCode === riskCode; });
-        if (type) list = list.filter(function(r) { return getRuleType(r).type === type; });
-        if (level) list = list.filter(function(r) { return r.riskLevel === level; });
-        return list;
+    function riskLevelBadge(level) {
+        var map = {
+            'low': '<span class="badge-custom badge-low">낮음</span>',
+            'medium': '<span class="badge-custom badge-medium">보통</span>',
+            'high': '<span class="badge-custom badge-high">높음</span>'
+        };
+        return map[level] || map['medium'];
     }
 
-    function fillVersionSelect() {
-        var sel = document.getElementById('rules-version-select');
-        if (!sel) return;
-        var list = [];
-        try {
-            var raw = localStorage.getItem('adsafe_ruleset_versions');
-            if (raw) list = JSON.parse(raw);
-        } catch (e) {}
-        if (!list.length && window.ADU_RULE_SET_VERSIONS) list = window.ADU_RULE_SET_VERSIONS;
-        sel.innerHTML = '';
-        list.forEach(function(v) {
-            var opt = document.createElement('option');
-            opt.value = v.id;
-            opt.textContent = v.versionName + (v.status === 'active' ? ' (활성)' : '');
-            if (v.status === 'active') opt.selected = true;
-            sel.appendChild(opt);
-        });
-        if (!list.length) {
-            var opt = document.createElement('option');
-            opt.textContent = '현재 룰셋';
-            sel.appendChild(opt);
-        }
+    function ruleTypeBadge(type) {
+        var map = {
+            'keyword': 'bg-info',
+            'regex': 'bg-warning',
+            'numeric': 'bg-primary',
+            'combo': 'bg-secondary'
+        };
+        return '<span class="badge ' + (map[type] || 'bg-secondary') + '">' + escapeHtml(type) + '</span>';
     }
 
-    function fillRiskCodeFilter() {
-        var sel = document.getElementById('filter-risk-code');
-        if (!sel || !window.ADU_RULES) return;
-        var codes = window.ADU_RULES.map(function(r) { return r.riskCode; });
-        var unique = codes.filter(function(c, i) { return codes.indexOf(c) === i; });
-        sel.innerHTML = '<option value="">전체</option>';
-        unique.forEach(function(c) {
-            var opt = document.createElement('option');
-            opt.value = c;
-            opt.textContent = c;
-            sel.appendChild(opt);
-        });
+    // 룰셋 버전 로드
+    function loadVersions() {
+        fetch(apiBase + '/api/rule-set-versions', { headers: ngrokHeaders })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                var sel = document.getElementById('rules-version-select');
+                sel.innerHTML = '<option value="">버전 선택</option>';
+                var items = data.items || [];
+                items.forEach(function(v) {
+                    var opt = document.createElement('option');
+                    opt.value = v.id;
+                    opt.textContent = (v.versionName || 'v' + v.id) + (v.status === 'active' ? ' (활성)' : '');
+                    if (v.status === 'active') {
+                        opt.selected = true;
+                        currentVersionId = v.id;
+                    }
+                    sel.appendChild(opt);
+                });
+                if (items.length === 0) {
+                    sel.innerHTML = '<option value="">버전 없음</option>';
+                }
+                loadRules();
+            })
+            .catch(function(err) {
+                console.error('버전 로드 실패:', err);
+            });
     }
 
-    function fillAddRuleRiskCode() {
-        var sel = document.getElementById('rule-risk-code');
-        if (!sel || !window.ADU_RULES) return;
-        sel.innerHTML = '';
-        window.ADU_RULES.forEach(function(r) {
-            var opt = document.createElement('option');
-            opt.value = r.riskCode;
-            opt.textContent = r.riskCode;
-            sel.appendChild(opt);
-        });
+    // 택소노미 로드 (리스크 코드 드롭다운용)
+    function loadTaxonomy() {
+        fetch(apiBase + '/api/taxonomy', { headers: ngrokHeaders })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                taxonomyList = data.items || [];
+                fillRiskCodeSelects();
+            })
+            .catch(function(err) {
+                console.error('택소노미 로드 실패:', err);
+            });
     }
 
-    function renderTable() {
-        var tbody = document.getElementById('rules-tbody');
-        var list = getFilteredRules();
-        if (!tbody) return;
-        tbody.innerHTML = '';
-        list.forEach(function(rule) {
-            var typeInfo = getRuleType(rule);
-            var levelLabel = riskLevelLabel[rule.riskLevel] || rule.riskLevel;
-            var badgeClass = riskLevelBadge[rule.riskLevel] || 'badge-medium';
-            var tr = document.createElement('tr');
-            tr.innerHTML =
-                '<td>' + escapeHtml(getRuleName(rule)) + '</td>' +
-                '<td><code>' + escapeHtml(rule.riskCode) + '</code></td>' +
-                '<td><span class="badge ' + typeInfo.badge + '">' + typeInfo.type + '</span></td>' +
-                '<td><small class="text-muted">' + escapeHtml(getPatternPreview(rule)) + '</small></td>' +
-                '<td><span class="badge-custom ' + badgeClass + '">' + escapeHtml(levelLabel) + '</span></td>' +
-                '<td><span class="badge bg-success">활성</span></td>' +
-                '<td><button type="button" class="btn btn-sm btn-outline-custom btn-edit-rule" data-risk-code="' + escapeHtml(rule.riskCode) + '">수정</button></td>';
-            tbody.appendChild(tr);
-        });
-        tbody.querySelectorAll('.btn-edit-rule').forEach(function(btn) {
-            btn.addEventListener('click', openEditModal);
+    function fillRiskCodeSelects() {
+        var filterSel = document.getElementById('filter-risk-code');
+        var addSel = document.getElementById('rule-risk-code');
+        
+        filterSel.innerHTML = '<option value="">전체</option>';
+        addSel.innerHTML = '<option value="">선택하세요</option>';
+        
+        taxonomyList.forEach(function(t) {
+            var opt1 = document.createElement('option');
+            opt1.value = t.riskCode;
+            opt1.textContent = t.riskCode;
+            filterSel.appendChild(opt1);
+            
+            var opt2 = document.createElement('option');
+            opt2.value = t.riskCode;
+            opt2.textContent = t.riskCode + ' - ' + (t.level1 || '') + '/' + (t.level2 || '');
+            addSel.appendChild(opt2);
         });
     }
 
+    // 룰 목록 로드
+    function loadRules() {
+        var versionId = document.getElementById('rules-version-select').value;
+        var riskCode = document.getElementById('filter-risk-code').value;
+        var ruleType = document.getElementById('filter-type').value;
+        var severity = document.getElementById('filter-level').value;
+
+        var params = new URLSearchParams();
+        if (versionId) params.append('version_id', versionId);
+        if (riskCode) params.append('risk_code', riskCode);
+        if (ruleType) params.append('rule_type', ruleType);
+        if (severity) params.append('severity', severity);
+
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">불러오는 중...</td></tr>';
+
+        fetch(apiBase + '/api/rules?' + params.toString(), { headers: ngrokHeaders })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                var items = data.items || [];
+                if (items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">룰이 없습니다.</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = '';
+                items.forEach(function(rule) {
+                    var tr = document.createElement('tr');
+                    var statusBadge = rule.isActive 
+                        ? '<span class="badge bg-success">활성</span>' 
+                        : '<span class="badge bg-secondary">비활성</span>';
+                    var patternPreview = rule.pattern ? (rule.pattern.length > 50 ? rule.pattern.substring(0, 50) + '...' : rule.pattern) : '-';
+                    var displayName = rule.ruleName || rule.level3 || rule.riskCode;
+                    
+                    tr.innerHTML =
+                        '<td>' + escapeHtml(displayName) + '</td>' +
+                        '<td><code>' + escapeHtml(rule.riskCode) + '</code></td>' +
+                        '<td>' + ruleTypeBadge(rule.ruleType) + '</td>' +
+                        '<td><small class="text-muted">' + escapeHtml(patternPreview) + '</small></td>' +
+                        '<td>' + riskLevelBadge(rule.severity) + '</td>' +
+                        '<td>' + statusBadge + '</td>' +
+                        '<td class="text-nowrap">' +
+                            '<button class="btn btn-sm btn-outline-secondary btn-edit-rule me-1" ' +
+                                'data-id="' + rule.id + '" ' +
+                                'data-name="' + escapeHtml(rule.ruleName || '') + '" ' +
+                                'data-riskcode="' + escapeHtml(rule.riskCode) + '" ' +
+                                'data-type="' + escapeHtml(rule.ruleType) + '" ' +
+                                'data-pattern="' + escapeHtml(rule.pattern || '') + '" ' +
+                                'data-severity="' + escapeHtml(rule.severity || 'medium') + '" ' +
+                                'data-explanation="' + escapeHtml(rule.explanation || '') + '" ' +
+                                'data-suggestion="' + escapeHtml(rule.suggestion || '') + '" ' +
+                                'data-active="' + (rule.isActive ? '1' : '0') + '"' +
+                            '>수정</button>' +
+                            '<button class="btn btn-sm btn-outline-danger btn-delete-rule" ' +
+                                'data-id="' + rule.id + '" ' +
+                                'data-name="' + escapeHtml(rule.ruleName || rule.riskCode) + '"' +
+                            '>삭제</button>' +
+                        '</td>';
+                    tbody.appendChild(tr);
+                });
+
+                tbody.querySelectorAll('.btn-edit-rule').forEach(function(btn) {
+                    btn.addEventListener('click', openEditModal);
+                });
+
+                tbody.querySelectorAll('.btn-delete-rule').forEach(function(btn) {
+                    btn.addEventListener('click', doDeleteRule);
+                });
+            })
+            .catch(function(err) {
+                console.error('룰 로드 실패:', err);
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">불러오기 실패: ' + escapeHtml(err.message || '') + '</td></tr>';
+            });
+    }
+
+    // 룰 삭제
+    function doDeleteRule(e) {
+        var btn = e.currentTarget;
+        var ruleId = btn.dataset.id;
+        var ruleName = btn.dataset.name;
+
+        if (!confirm('"' + ruleName + '" 룰을 삭제하시겠습니까?')) return;
+
+        btn.disabled = true;
+        btn.textContent = '삭제 중...';
+
+        fetch(apiBase + '/api/rules/' + encodeURIComponent(ruleId), {
+            method: 'DELETE',
+            headers: ngrokHeaders
+        })
+        .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+        .then(function(result) {
+            if (result.ok) {
+                alert('삭제 완료되었습니다.');
+                loadRules();
+            } else {
+                alert('삭제 실패: ' + (result.data.error || '알 수 없는 오류'));
+                btn.disabled = false;
+                btn.textContent = '삭제';
+            }
+        })
+        .catch(function(err) {
+            alert('삭제 실패: ' + (err.message || '네트워크 오류'));
+            btn.disabled = false;
+            btn.textContent = '삭제';
+        });
+    }
+
+    // 수정 모달 열기
     function openEditModal(e) {
-        var riskCode = e.currentTarget.getAttribute('data-risk-code');
-        var rule = window.ADU_RULES && window.ADU_RULES.find(function(r) { return r.riskCode === riskCode; });
-        if (!rule) return;
-        document.getElementById('edit-rule-riskCode').value = rule.riskCode;
-        document.getElementById('edit-rule-level3').value = rule.level3 || '';
-        document.getElementById('edit-rule-riskLevel').value = rule.riskLevel || 'medium';
-        document.getElementById('edit-rule-level1').value = rule.level1 || '';
-        document.getElementById('edit-rule-level2').value = rule.level2 || '';
-        document.getElementById('edit-rule-level3-edit').value = rule.level3 || '';
-        document.getElementById('edit-rule-keywords').value = (rule.keywords && rule.keywords.join(', ')) || '';
-        document.getElementById('edit-rule-explanation').value = rule.explanation || '';
-        document.getElementById('edit-rule-suggestion').value = rule.suggestion || '';
+        var btn = e.currentTarget;
+        document.getElementById('edit-rule-id').value = btn.dataset.id || '';
+        document.getElementById('edit-rule-name').value = btn.dataset.name || '';
+        document.getElementById('edit-rule-riskCode').value = btn.dataset.riskcode || '';
+        document.getElementById('edit-rule-type').value = btn.dataset.type || 'keyword';
+        document.getElementById('edit-rule-pattern').value = btn.dataset.pattern || '';
+        document.getElementById('edit-rule-severity').value = btn.dataset.severity || 'medium';
+        document.getElementById('edit-rule-explanation').value = btn.dataset.explanation || '';
+        document.getElementById('edit-rule-suggestion').value = btn.dataset.suggestion || '';
+        document.getElementById('edit-rule-active').checked = btn.dataset.active === '1';
+        
         var modal = new bootstrap.Modal(document.getElementById('editRuleModal'));
         modal.show();
     }
 
-    function init() {
-        fillVersionSelect();
-        fillRiskCodeFilter();
-        fillAddRuleRiskCode();
-        renderTable();
-        var btn = document.getElementById('rules-filter-btn');
-        if (btn) btn.addEventListener('click', function() { renderTable(); });
-        document.getElementById('editRuleSave').addEventListener('click', function() {
-            /* 저장 시 서버/로컬 반영은 추후 연동 */
-            bootstrap.Modal.getInstance(document.getElementById('editRuleModal')).hide();
-        });
-    }
+    // 룰 추가
+    document.getElementById('btn-add-rule').addEventListener('click', function() {
+        var btn = this;
+        var ruleName = document.getElementById('rule-name').value.trim();
+        var riskCode = document.getElementById('rule-risk-code').value;
+        var ruleType = document.getElementById('rule-type').value;
+        var pattern = document.getElementById('rule-pattern').value.trim();
+        var severity = document.getElementById('rule-severity').value;
+        var explanation = document.getElementById('rule-explanation').value.trim();
+        var isActive = document.getElementById('rule-active').checked;
+        var versionId = document.getElementById('rules-version-select').value;
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
+        if (!riskCode) {
+            alert('리스크 코드를 선택하세요.');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '저장 중...';
+
+        fetch(apiBase + '/api/rules', {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, ngrokHeaders),
+            body: JSON.stringify({
+                versionId: versionId ? parseInt(versionId) : 0,
+                riskCode: riskCode,
+                ruleName: ruleName,
+                ruleType: ruleType,
+                pattern: pattern,
+                severity: severity,
+                explanation: explanation,
+                isActive: isActive
+            })
+        })
+        .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+        .then(function(result) {
+            btn.disabled = false;
+            btn.textContent = '저장';
+            
+            if (result.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('addRuleModal')).hide();
+                alert('저장 완료되었습니다.');
+                // 폼 초기화
+                document.getElementById('rule-name').value = '';
+                document.getElementById('rule-risk-code').value = '';
+                document.getElementById('rule-pattern').value = '';
+                document.getElementById('rule-explanation').value = '';
+                document.getElementById('rule-type').value = 'keyword';
+                document.getElementById('rule-severity').value = 'medium';
+                document.getElementById('rule-active').checked = true;
+                loadRules();
+            } else {
+                alert('저장 실패: ' + (result.data.error || '알 수 없는 오류'));
+            }
+        })
+        .catch(function(err) {
+            btn.disabled = false;
+            btn.textContent = '저장';
+            alert('저장 실패: ' + (err.message || '네트워크 오류'));
+        });
+    });
+
+    // 룰 수정
+    document.getElementById('btn-edit-rule').addEventListener('click', function() {
+        var btn = this;
+        var ruleId = document.getElementById('edit-rule-id').value;
+        var ruleName = document.getElementById('edit-rule-name').value.trim();
+        var ruleType = document.getElementById('edit-rule-type').value;
+        var pattern = document.getElementById('edit-rule-pattern').value.trim();
+        var severity = document.getElementById('edit-rule-severity').value;
+        var explanation = document.getElementById('edit-rule-explanation').value.trim();
+        var suggestion = document.getElementById('edit-rule-suggestion').value.trim();
+        var isActive = document.getElementById('edit-rule-active').checked;
+
+        if (!ruleId) {
+            alert('룰 ID가 없습니다.');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '저장 중...';
+
+        fetch(apiBase + '/api/rules/' + encodeURIComponent(ruleId), {
+            method: 'PUT',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, ngrokHeaders),
+            body: JSON.stringify({
+                ruleName: ruleName,
+                ruleType: ruleType,
+                pattern: pattern,
+                severity: severity,
+                explanation: explanation,
+                suggestion: suggestion,
+                isActive: isActive
+            })
+        })
+        .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+        .then(function(result) {
+            btn.disabled = false;
+            btn.textContent = '저장';
+            
+            if (result.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('editRuleModal')).hide();
+                alert('저장 완료되었습니다.');
+                loadRules();
+            } else {
+                alert('저장 실패: ' + (result.data.error || '알 수 없는 오류'));
+            }
+        })
+        .catch(function(err) {
+            btn.disabled = false;
+            btn.textContent = '저장';
+            alert('저장 실패: ' + (err.message || '네트워크 오류'));
+        });
+    });
+
+    // 필터 및 버전 변경 이벤트
+    document.getElementById('rules-filter-btn').addEventListener('click', loadRules);
+    document.getElementById('rules-version-select').addEventListener('change', loadRules);
+
+    // 초기화
+    loadVersions();
+    loadTaxonomy();
 })();
     </script>
 </body>

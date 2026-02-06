@@ -65,7 +65,67 @@ async function seed() {
     }
     console.log('  risk_taxonomy:', ADU_RULES.length, '건 반영');
 
-    // 4) quizzes + quiz_choices (ADU_QUESTIONS 기반)
+    // 4) rule_set_versions + rules (ADU_RULES 기반)
+    let ruleSetVersionId;
+    const existingVersion = await db.queryOne("SELECT rule_set_version_id FROM rule_set_versions WHERE name = 'v1.0.0'");
+    if (!existingVersion) {
+      const versionResult = await db.query(
+        `INSERT INTO rule_set_versions (name, industry, status, changelog, created_by)
+         VALUES ('v1.0.0', 'medical', 'active', '초기 룰셋 버전 - ADU_RULES 기반 생성', 1)`
+      );
+      ruleSetVersionId = versionResult.insertId;
+      console.log('  rule_set_versions 1건 추가 (v1.0.0)');
+    } else {
+      ruleSetVersionId = existingVersion.rule_set_version_id;
+      console.log('  rule_set_versions 이미 존재 (v1.0.0)');
+    }
+
+    // rules 시드 (룰셋 버전에 연결)
+    let ruleCount = 0;
+    for (const rule of ADU_RULES) {
+      // 중복 체크: rule_set_version_id + risk_code 기준
+      const existingRule = await db.queryOne(
+        'SELECT rule_id FROM rules WHERE rule_set_version_id = ? AND risk_code = ?',
+        [ruleSetVersionId, rule.riskCode]
+      );
+      if (existingRule) continue;
+
+      // 패턴 구성: keywords + regex
+      let pattern = '';
+      if (rule.keywords && rule.keywords.length) {
+        pattern = rule.keywords.join(', ');
+      }
+      if (rule.regex && rule.regex.length) {
+        pattern += (pattern ? ' | ' : '') + 'regex: ' + rule.regex.join(', ');
+      }
+
+      // rule_type 결정
+      let ruleType = 'keyword';
+      if (rule.regex && rule.regex.length && rule.keywords && rule.keywords.length) {
+        ruleType = 'combo';
+      } else if (rule.regex && rule.regex.length) {
+        ruleType = 'regex';
+      }
+
+      await db.query(
+        `INSERT INTO rules (rule_set_version_id, risk_code, rule_name, rule_type, pattern, severity_override, explanation_template, suggestion_template, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        [
+          ruleSetVersionId,
+          rule.riskCode,
+          rule.level3 || rule.level2 || rule.riskCode,
+          ruleType,
+          pattern,
+          rule.riskLevel || 'medium',
+          rule.explanation || '',
+          rule.suggestion || ''
+        ]
+      );
+      ruleCount++;
+    }
+    console.log('  rules:', ruleCount, '건 추가 (version:', ruleSetVersionId, ')');
+
+    // 5) quizzes + quiz_choices (ADU_QUESTIONS 기반)
     let quizCount = 0;
     for (const q of ADU_QUESTIONS) {
       // 중복 체크: stem 기준

@@ -15,9 +15,18 @@
             <div class="d-flex justify-content-between align-items-center w-100">
                 <a class="navbar-brand" href="../index.html">AdSafe</a>
                 <div class="d-flex align-items-center gap-3">
-                    <a href="../index.html" class="nav-link text-decoration-none">대시보드</a>
-                    <span class="text-muted">|</span>
-                    <span class="text-primary fw-bold">어드민 콘솔</span>
+                    <span class="text-primary fw-bold me-2">어드민 콘솔</span>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-custom btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" id="nav-user-btn">
+                            <i class="bi bi-person-circle me-1"></i><span id="nav-user-label">사용자</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="../index.html">메인으로</a></li>
+                            <li><a class="dropdown-item" href="../account.html">계정 설정</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="../login.html" id="nav-logout">로그아웃</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -35,7 +44,7 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="taxonomy.html">
-                            <i class="bi bi-diagram-3 me-2"></i>리스크 택소노미
+                            <i class="bi bi-diagram-3 me-2"></i>리스크 유형 관리
                         </a>
                     </li>
                     <li class="nav-item">
@@ -147,9 +156,8 @@
                         <div class="mb-3">
                             <label for="invite-role" class="form-label">권한</label>
                             <select class="form-select form-control-custom" id="invite-role">
-                                <option value="editor">Editor</option>
-                                <option value="viewer">Viewer</option>
-                                <option value="admin">Admin</option>
+                                <option value="editor" selected>Editor (일반 사용자)</option>
+                                <option value="admin">Admin (관리자)</option>
                             </select>
                         </div>
                     </form>
@@ -180,8 +188,8 @@
                         <div class="mb-3">
                             <label for="edit-role" class="form-label">권한</label>
                             <select class="form-select form-control-custom" id="edit-role">
-                                <option value="admin">Admin</option>
-                                <option value="user">User</option>
+                                <option value="admin">Admin (관리자)</option>
+                                <option value="editor">Editor (일반 사용자)</option>
                             </select>
                         </div>
                         <div class="mb-3">
@@ -214,8 +222,20 @@
 (function() {
     var currentEditUserId = null;
 
-    function roleLabel(r) { return r === 'admin' ? 'Admin' : 'User'; }
-    function roleBadge(r) { return r === 'admin' ? 'bg-info' : 'bg-secondary'; }
+    // owner→admin, viewer→editor로 통합
+    function normalizeRole(r) {
+        if (r === 'owner') return 'admin';
+        if (r === 'viewer') return 'editor';
+        return r || 'editor';
+    }
+    function roleLabel(r) {
+        var nr = normalizeRole(r);
+        return nr === 'admin' ? 'Admin (관리자)' : 'Editor (일반)';
+    }
+    function roleBadge(r) {
+        var nr = normalizeRole(r);
+        return nr === 'admin' ? 'bg-info' : 'bg-secondary';
+    }
     function formatDate(iso) {
         if (!iso) return '-';
         try {
@@ -249,7 +269,7 @@
             
             tbody.innerHTML = '';
             list.forEach(function(u) {
-                var role = (u.role || 'user');
+                var role = normalizeRole(u.role);
                 var status = (u.status || 'active');
                 var statusBadge = status === 'disabled' || status === 'inactive' 
                     ? '<span class="badge bg-danger">비활성</span>' 
@@ -279,7 +299,7 @@
         
         document.getElementById('edit-user-email').value = currentEditUserId;
         document.getElementById('edit-email-readonly').value = email;
-        document.getElementById('edit-role').value = role || 'user';
+        document.getElementById('edit-role').value = normalizeRole(role);
         document.getElementById('edit-status').value = status || 'active';
         var modal = new bootstrap.Modal(document.getElementById('editUserModal'));
         modal.show();

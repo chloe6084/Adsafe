@@ -15,9 +15,18 @@
             <div class="d-flex justify-content-between align-items-center w-100">
                 <a class="navbar-brand" href="../index.html">AdSafe</a>
                 <div class="d-flex align-items-center gap-3">
-                    <a href="../index.html" class="nav-link text-decoration-none">대시보드</a>
-                    <span class="text-muted">|</span>
-                    <span class="text-primary fw-bold">어드민 콘솔</span>
+                    <span class="text-primary fw-bold me-2">어드민 콘솔</span>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-custom btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" id="nav-user-btn">
+                            <i class="bi bi-person-circle me-1"></i><span id="nav-user-label">사용자</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="../index.html">메인으로</a></li>
+                            <li><a class="dropdown-item" href="../account.html">계정 설정</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="../login.html" id="nav-logout">로그아웃</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -35,7 +44,7 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="taxonomy.html">
-                            <i class="bi bi-diagram-3 me-2"></i>리스크 택소노미
+                            <i class="bi bi-diagram-3 me-2"></i>리스크 유형 관리
                         </a>
                     </li>
                     <li class="nav-item">
@@ -83,7 +92,7 @@
                                 </tr>
                             </thead>
                             <tbody id="ruleset-tbody">
-                                <!-- js/rule-set-versions.js + ADU_RULES 기반 동적 렌더링 -->
+                                <tr><td colspan="7" class="text-center py-4 text-muted">불러오는 중...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -101,7 +110,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form>
+                    <form id="addRulesetForm">
                         <div class="mb-3">
                             <label for="ruleset-name" class="form-label">버전명</label>
                             <input type="text" class="form-control form-control-custom" id="ruleset-name" placeholder="v2.2.0" required>
@@ -123,7 +132,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-custom" data-bs-dismiss="modal">취소</button>
-                    <button type="button" class="btn btn-primary-custom">생성</button>
+                    <button type="button" class="btn btn-primary-custom" id="btn-add-ruleset">생성</button>
                 </div>
             </div>
         </div>
@@ -151,12 +160,9 @@
                         <dd class="col-sm-9" id="detail-createdAt">-</dd>
                         <dt class="col-sm-3">활성화일</dt>
                         <dd class="col-sm-9" id="detail-activatedAt">-</dd>
+                        <dt class="col-sm-3">변경내역</dt>
+                        <dd class="col-sm-9" id="detail-changelog">-</dd>
                     </dl>
-                    <div id="detail-ruleListWrap" class="mt-3 d-none">
-                        <hr>
-                        <h6 class="mb-2">포함 룰 (리스크 코드)</h6>
-                        <ul id="detail-ruleList" class="small text-muted mb-0 list-unstyled"></ul>
-                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-custom" data-bs-dismiss="modal">닫기</button>
@@ -172,13 +178,16 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../js/rules-data.js"></script>
-    <script src="../js/rule-set-versions.js"></script>
-    <script src="../js/audit-logs.js"></script>
+    <script src="../js/auth.js"></script>
     <script src="../main.js"></script>
     <script>
 (function() {
-    var STORAGE_KEY = 'adsafe_ruleset_versions';
+    var apiBase = (window.ADSAFE_API_URL || '').replace(/\/$/, '');
+    var ngrokHeaders = { 'ngrok-skip-browser-warning': 'true' };
+    var tbody = document.getElementById('ruleset-tbody');
+    var versionList = [];
+    var ruleCountMap = {};
+
     var statusBadge = {
         active: { label: '활성', class: 'bg-success' },
         inactive: { label: '비활성', class: 'bg-secondary' },
@@ -186,34 +195,12 @@
         draft: { label: '초안', class: 'bg-warning' }
     };
 
-    function getVersions() {
-        try {
-            var raw = localStorage.getItem(STORAGE_KEY);
-            if (raw) {
-                var parsed = JSON.parse(raw);
-                if (Array.isArray(parsed) && parsed.length) return parsed;
-            }
-        } catch (e) {}
-        if (typeof window.ADU_RULE_SET_VERSIONS !== 'undefined') {
-            return JSON.parse(JSON.stringify(window.ADU_RULE_SET_VERSIONS));
-        }
-        return [];
-    }
-
-    function saveVersions(list) {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-        } catch (e) {}
-    }
-
-    function getRuleCount(item) {
-        if (item.ruleCount != null) return item.ruleCount;
-        return (window.ADU_RULES && Array.isArray(window.ADU_RULES)) ? window.ADU_RULES.length : 0;
-    }
-
-    function getIndustryLabel(key) {
-        return (window.ADU_RULE_SET_INDUSTRY_LABELS && window.ADU_RULE_SET_INDUSTRY_LABELS[key]) || key || '-';
-    }
+    var industryLabels = {
+        'general': '일반',
+        'medical': '의료',
+        'health_supplement': '건강기능식품',
+        'other': '기타'
+    };
 
     function escapeHtml(s) {
         if (s == null) return '';
@@ -222,119 +209,252 @@
         return div.innerHTML;
     }
 
-    function todayStr() {
-        var d = new Date();
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        var d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
         return d.getFullYear() + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0');
     }
 
+    // 룰셋 버전 목록 로드
+    function loadVersions() {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">불러오는 중...</td></tr>';
+
+        fetch(apiBase + '/api/rule-set-versions', { headers: ngrokHeaders })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                versionList = data.items || [];
+                // 룰 개수 조회
+                return fetch(apiBase + '/api/rules', { headers: ngrokHeaders });
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(rulesData) {
+                // 버전별 룰 개수 계산
+                ruleCountMap = {};
+                (rulesData.items || []).forEach(function(rule) {
+                    var vid = rule.versionId;
+                    ruleCountMap[vid] = (ruleCountMap[vid] || 0) + 1;
+                });
+                renderTable();
+            })
+            .catch(function(err) {
+                console.error('버전 로드 실패:', err);
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">불러오기 실패</td></tr>';
+            });
+    }
+
     function renderTable() {
-        var tbody = document.getElementById('ruleset-tbody');
-        var list = getVersions();
-        if (!tbody) return;
+        if (versionList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">룰셋 버전이 없습니다.</td></tr>';
+            return;
+        }
+
         tbody.innerHTML = '';
-        list.forEach(function(item) {
-            var st = statusBadge[item.status] || { label: item.status, class: 'bg-secondary' };
-            var ruleCount = getRuleCount(item);
-            var industryLabel = getIndustryLabel(item.industryKey);
-            var activatedAt = item.activatedAt ? escapeHtml(item.activatedAt) : '-';
-            var actions = '<button type="button" class="btn btn-sm btn-outline-custom me-1 btn-detail" data-id="' + escapeHtml(item.id) + '">상세</button>';
+        versionList.forEach(function(item) {
+            var st = statusBadge[item.status] || { label: item.status || '-', class: 'bg-secondary' };
+            var ruleCount = ruleCountMap[item.id] || 0;
+            var industryLabel = industryLabels[item.industry] || item.industry || '-';
+            var activatedAt = item.activatedAt ? formatDate(item.activatedAt) : '-';
+            var createdAt = formatDate(item.createdAt);
+
+            var actions = '<button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-detail" data-id="' + item.id + '">상세</button>';
+            
             if (item.status === 'active') {
-                actions += '<button type="button" class="btn btn-sm btn-outline-custom btn-deactivate" data-id="' + escapeHtml(item.id) + '">비활성화</button>';
+                actions += '<button type="button" class="btn btn-sm btn-outline-secondary btn-deactivate" data-id="' + item.id + '">비활성화</button>';
             } else if (item.status === 'inactive' || item.status === 'draft') {
-                actions += '<button type="button" class="btn btn-sm btn-primary-custom btn-activate" data-id="' + escapeHtml(item.id) + '">활성화</button>';
+                actions += '<button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-activate" data-id="' + item.id + '">활성화</button>';
+                actions += '<button type="button" class="btn btn-sm btn-outline-secondary btn-delete" data-id="' + item.id + '" data-name="' + escapeHtml(item.versionName) + '">삭제</button>';
+            } else if (item.status === 'deprecated') {
+                actions += '<button type="button" class="btn btn-sm btn-outline-secondary btn-delete" data-id="' + item.id + '" data-name="' + escapeHtml(item.versionName) + '">삭제</button>';
             }
+
             var tr = document.createElement('tr');
             tr.innerHTML =
                 '<td><strong>' + escapeHtml(item.versionName) + '</strong></td>' +
                 '<td>' + escapeHtml(industryLabel) + '</td>' +
                 '<td><span class="badge ' + st.class + '">' + escapeHtml(st.label) + '</span></td>' +
                 '<td>' + ruleCount + '개</td>' +
-                '<td>' + escapeHtml(item.createdAt) + '</td>' +
-                '<td>' + activatedAt + '</td>' +
-                '<td>' + actions + '</td>';
+                '<td>' + escapeHtml(createdAt) + '</td>' +
+                '<td>' + escapeHtml(activatedAt) + '</td>' +
+                '<td class="text-nowrap">' + actions + '</td>';
             tbody.appendChild(tr);
         });
 
+        // 이벤트 바인딩
         tbody.querySelectorAll('.btn-detail').forEach(function(btn) {
             btn.addEventListener('click', openDetail);
-        });
-        tbody.querySelectorAll('.btn-deactivate').forEach(function(btn) {
-            btn.addEventListener('click', doDeactivate);
         });
         tbody.querySelectorAll('.btn-activate').forEach(function(btn) {
             btn.addEventListener('click', doActivate);
         });
+        tbody.querySelectorAll('.btn-deactivate').forEach(function(btn) {
+            btn.addEventListener('click', doDeactivate);
+        });
+        tbody.querySelectorAll('.btn-delete').forEach(function(btn) {
+            btn.addEventListener('click', doDelete);
+        });
     }
 
     function openDetail(e) {
-        var id = e.currentTarget.getAttribute('data-id');
-        var list = getVersions();
-        var item = list.find(function(v) { return v.id === id; });
+        var id = parseInt(e.currentTarget.getAttribute('data-id'), 10);
+        var item = versionList.find(function(v) { return v.id === id; });
         if (!item) return;
-        var st = statusBadge[item.status] || { label: item.status };
-        document.getElementById('detail-versionName').textContent = item.versionName;
-        document.getElementById('detail-industry').textContent = getIndustryLabel(item.industryKey);
-        document.getElementById('detail-status').innerHTML = '<span class="badge ' + (statusBadge[item.status] ? statusBadge[item.status].class : 'bg-secondary') + '">' + st.label + '</span>';
-        document.getElementById('detail-ruleCount').textContent = getRuleCount(item) + '개';
-        document.getElementById('detail-createdAt').textContent = item.createdAt || '-';
-        document.getElementById('detail-activatedAt').textContent = item.activatedAt || '-';
-        var wrap = document.getElementById('detail-ruleListWrap');
-        var ul = document.getElementById('detail-ruleList');
-        if (item.status === 'active' && window.ADU_RULES && Array.isArray(window.ADU_RULES)) {
-            ul.innerHTML = '';
-            window.ADU_RULES.forEach(function(r) {
-                var li = document.createElement('li');
-                li.textContent = r.riskCode + ' — ' + (r.level1 || '') + ' / ' + (r.level2 || '') + ' / ' + (r.level3 || '');
-                ul.appendChild(li);
-            });
-            wrap.classList.remove('d-none');
-        } else {
-            wrap.classList.add('d-none');
-        }
+
+        var st = statusBadge[item.status] || { label: item.status || '-', class: 'bg-secondary' };
+        document.getElementById('detail-versionName').textContent = item.versionName || '-';
+        document.getElementById('detail-industry').textContent = industryLabels[item.industry] || item.industry || '-';
+        document.getElementById('detail-status').innerHTML = '<span class="badge ' + st.class + '">' + st.label + '</span>';
+        document.getElementById('detail-ruleCount').textContent = (ruleCountMap[item.id] || 0) + '개';
+        document.getElementById('detail-createdAt').textContent = formatDate(item.createdAt);
+        document.getElementById('detail-activatedAt').textContent = item.activatedAt ? formatDate(item.activatedAt) : '-';
+        document.getElementById('detail-changelog').textContent = item.changelog || '-';
+
         var modal = new bootstrap.Modal(document.getElementById('detailRulesetModal'));
         modal.show();
     }
 
-    function doDeactivate(e) {
-        var id = e.currentTarget.getAttribute('data-id');
-        var list = getVersions();
-        var item = list.find(function(v) { return v.id === id; });
-        if (!item || item.status !== 'active') return;
-        var versionName = item.versionName;
-        item.status = 'inactive';
-        item.activatedAt = null;
-        saveVersions(list);
-        if (typeof window.pushAuditLog === 'function') {
-            window.pushAuditLog({ action: 'RULESET_DEACTIVATED', entityType: 'rule_set_versions', entityId: id, summary: versionName + ' 비활성화' });
-        }
-        renderTable();
-    }
-
     function doActivate(e) {
-        var id = e.currentTarget.getAttribute('data-id');
-        var list = getVersions();
-        var item = list.find(function(v) { return v.id === id; });
-        if (!item || (item.status !== 'inactive' && item.status !== 'draft')) return;
-        list.forEach(function(v) {
-            if (v.status === 'active') {
-                v.status = 'inactive';
-                v.activatedAt = null;
+        var btn = e.currentTarget;
+        var id = parseInt(btn.getAttribute('data-id'), 10);
+        if (!confirm('이 버전을 활성화하시겠습니까? 현재 활성 버전은 비활성화됩니다.')) return;
+
+        btn.disabled = true;
+        btn.textContent = '처리 중...';
+
+        fetch(apiBase + '/api/rule-set-versions/' + id + '/activate', {
+            method: 'PUT',
+            headers: ngrokHeaders
+        })
+        .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+        .then(function(result) {
+            if (result.ok) {
+                alert('활성화 완료되었습니다.');
+                loadVersions();
+            } else {
+                alert('활성화 실패: ' + (result.data.error || '알 수 없는 오류'));
+                btn.disabled = false;
+                btn.textContent = '활성화';
             }
+        })
+        .catch(function(err) {
+            alert('활성화 실패: ' + (err.message || '네트워크 오류'));
+            btn.disabled = false;
+            btn.textContent = '활성화';
         });
-        item.status = 'active';
-        item.activatedAt = todayStr();
-        saveVersions(list);
-        if (typeof window.pushAuditLog === 'function') {
-            window.pushAuditLog({ action: 'RULESET_ACTIVATED', entityType: 'rule_set_versions', entityId: item.id, summary: item.versionName + ' 활성화' });
-        }
-        renderTable();
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', renderTable);
-    } else {
-        renderTable();
+    function doDeactivate(e) {
+        var btn = e.currentTarget;
+        var id = parseInt(btn.getAttribute('data-id'), 10);
+        if (!confirm('이 버전을 비활성화하시겠습니까?')) return;
+
+        btn.disabled = true;
+        btn.textContent = '처리 중...';
+
+        fetch(apiBase + '/api/rule-set-versions/' + id + '/deactivate', {
+            method: 'PUT',
+            headers: ngrokHeaders
+        })
+        .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+        .then(function(result) {
+            if (result.ok) {
+                alert('비활성화 완료되었습니다.');
+                loadVersions();
+            } else {
+                alert('비활성화 실패: ' + (result.data.error || '알 수 없는 오류'));
+                btn.disabled = false;
+                btn.textContent = '비활성화';
+            }
+        })
+        .catch(function(err) {
+            alert('비활성화 실패: ' + (err.message || '네트워크 오류'));
+            btn.disabled = false;
+            btn.textContent = '비활성화';
+        });
     }
+
+    function doDelete(e) {
+        var btn = e.currentTarget;
+        var id = btn.getAttribute('data-id');
+        var name = btn.getAttribute('data-name');
+
+        if (!confirm('"' + name + '" 버전을 삭제하시겠습니까?\n연결된 룰도 함께 삭제됩니다.')) return;
+
+        btn.disabled = true;
+        btn.textContent = '삭제 중...';
+
+        fetch(apiBase + '/api/rule-set-versions/' + encodeURIComponent(id), {
+            method: 'DELETE',
+            headers: ngrokHeaders
+        })
+        .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+        .then(function(result) {
+            if (result.ok) {
+                alert('삭제 완료되었습니다.' + (result.data.deletedRules > 0 ? ' (연결된 룰 ' + result.data.deletedRules + '개 함께 삭제)' : ''));
+                loadVersions();
+            } else {
+                alert('삭제 실패: ' + (result.data.error || '알 수 없는 오류'));
+                btn.disabled = false;
+                btn.textContent = '삭제';
+            }
+        })
+        .catch(function(err) {
+            alert('삭제 실패: ' + (err.message || '네트워크 오류'));
+            btn.disabled = false;
+            btn.textContent = '삭제';
+        });
+    }
+
+    // 룰셋 버전 추가
+    document.getElementById('btn-add-ruleset').addEventListener('click', function() {
+        var btn = this;
+        var name = document.getElementById('ruleset-name').value.trim();
+        var industry = document.getElementById('ruleset-industry').value;
+        var changelog = document.getElementById('ruleset-changelog').value.trim();
+
+        if (!name) {
+            alert('버전명을 입력하세요.');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '생성 중...';
+
+        fetch(apiBase + '/api/rule-set-versions', {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, ngrokHeaders),
+            body: JSON.stringify({
+                versionName: name,
+                industry: industry,
+                changelog: changelog,
+                status: 'draft'
+            })
+        })
+        .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+        .then(function(result) {
+            btn.disabled = false;
+            btn.textContent = '생성';
+
+            if (result.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('addRulesetModal')).hide();
+                alert('룰셋 버전이 생성되었습니다.');
+                document.getElementById('ruleset-name').value = '';
+                document.getElementById('ruleset-changelog').value = '';
+                document.getElementById('ruleset-industry').value = 'general';
+                loadVersions();
+            } else {
+                alert('생성 실패: ' + (result.data.error || '알 수 없는 오류'));
+            }
+        })
+        .catch(function(err) {
+            btn.disabled = false;
+            btn.textContent = '생성';
+            alert('생성 실패: ' + (err.message || '네트워크 오류'));
+        });
+    });
+
+    // 초기화
+    loadVersions();
 })();
     </script>
 </body>

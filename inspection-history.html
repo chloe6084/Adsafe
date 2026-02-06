@@ -15,9 +15,19 @@
             <div class="d-flex justify-content-between align-items-center w-100">
                 <a class="navbar-brand" href="index.html">AdSafe</a>
                 <div class="d-flex align-items-center gap-3">
-                    <a href="index.html" class="nav-link text-decoration-none">대시보드</a>
                     <a href="adsafe.html" class="nav-link text-decoration-none">검수하기</a>
                     <a href="learning-dashboard.html" class="nav-link text-decoration-none">학습 현황</a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-custom btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" id="nav-user-btn">
+                            <i class="bi bi-person-circle me-1"></i><span id="nav-user-label">사용자</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" data-role="admin" style="display:none;">어드민 콘솔</a></li>
+                            <li><a class="dropdown-item" href="account.html">계정 설정</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="login.html" id="nav-logout">로그아웃</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -40,7 +50,7 @@
             <div class="row g-3">
                 <div class="col-md-3">
                     <label class="form-label">광고 유형</label>
-                    <select class="form-select form-control-custom" id="filter-project" disabled title="추후 지원 예정">
+                    <select class="form-select form-control-custom" id="filter-project">
                         <option value="">전체</option>
                         <option value="이벤트·할인">이벤트·할인</option>
                         <option value="시술·진료 소개">시술·진료 소개</option>
@@ -188,7 +198,9 @@
             function getFilterParams() {
                 var levelEl = document.getElementById('filter-level');
                 var dateEl = document.getElementById('filter-date');
+                var projectEl = document.getElementById('filter-project');
                 var level = (levelEl && levelEl.value) ? levelEl.value : '';
+                var project = (projectEl && projectEl.value) ? projectEl.value : '';
                 var dateVal = (dateEl && dateEl.value) ? dateEl.value : '';
                 var dateFrom = '', dateTo = '';
                 if (dateVal) {
@@ -201,12 +213,19 @@
                         dateFrom = start.getFullYear() + '-' + String(start.getMonth() + 1).padStart(2, '0') + '-' + String(start.getDate()).padStart(2, '0');
                     }
                 }
-                return { level: level, date_from: dateFrom, date_to: dateTo };
+                return { level: level, date_from: dateFrom, date_to: dateTo, ad_type: project };
             }
+            // 현재 로그인한 사용자 ID 가져오기
+            var currentUser = window.AdSafeAuth.getCurrentUser();
+            var userId = currentUser && currentUser.id ? currentUser.id : 0;
+
             function buildQueryString(page) {
                 var q = 'page=' + page + '&limit=' + PAGE_SIZE;
+                // 현재 사용자의 검수 이력만 조회
+                if (userId > 0) q += '&user_id=' + userId;
                 var f = getFilterParams();
                 if (f.level) q += '&level=' + encodeURIComponent(f.level);
+                if (f.ad_type) q += '&ad_type=' + encodeURIComponent(f.ad_type);
                 if (f.date_from) q += '&date_from=' + encodeURIComponent(f.date_from);
                 if (f.date_to) q += '&date_to=' + encodeURIComponent(f.date_to);
                 return q;

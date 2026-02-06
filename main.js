@@ -43,6 +43,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const titleEl = document.getElementById('ad-title');
             const project = (projectEl && projectEl.selectedIndex >= 0) ? projectEl.options[projectEl.selectedIndex].text : '';
             const title = (titleEl && titleEl.value) ? titleEl.value.trim() : '';
+            
+            // 현재 로그인한 사용자 ID 가져오기
+            const currentUser = window.AdSafeAuth ? window.AdSafeAuth.getCurrentUser() : null;
+            const userId = currentUser && currentUser.id ? currentUser.id : 1;
 
             const btn = this;
             btn.disabled = true;
@@ -52,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch(apiUrl, {
                 method: 'POST',
                 headers: Object.assign({ 'Content-Type': 'application/json' }, window.ADSAFE_FETCH_HEADERS || {}),
-                body: JSON.stringify({ text: rawText, project: project || '', title: title || '' })
+                body: JSON.stringify({ text: rawText, project: project || '', title: title || '', user_id: userId })
             }).then(function(res) {
                 if (!res.ok) throw new Error('검수 요청 실패: ' + res.status);
                 return res.json();
@@ -185,3 +189,44 @@ function getRiskCodeName(code) {
     };
     return map[code] || code;
 }
+
+// 공통 네비게이션 사용자 드롭다운 초기화
+// 페이지에 id="nav-user-label", id="nav-logout", data-role="admin" 요소가 있으면 자동 처리
+function initNavUserDropdown() {
+    if (typeof window.AdSafeAuth === 'undefined') return;
+    var user = window.AdSafeAuth.getCurrentUser();
+    if (!user) return;
+
+    // 사용자 이름 표시
+    var label = document.getElementById('nav-user-label');
+    if (label) label.textContent = user.name || user.email;
+
+    // 로그아웃 이벤트
+    var logout = document.getElementById('nav-logout');
+    if (logout) {
+        logout.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.AdSafeAuth.clearCurrentUser();
+            // admin 폴더에 있으면 상위로, 아니면 현재 위치
+            var isAdmin = window.location.pathname.indexOf('/admin/') !== -1;
+            window.location.href = isAdmin ? '../login.html' : 'login.html';
+        });
+    }
+
+    // 어드민 메뉴 표시 (admin/owner 역할만)
+    var userRole = (user && user.role) ? user.role : 'user';
+    if (userRole === 'admin' || userRole === 'owner') {
+        var adminLink = document.querySelector('[data-role="admin"]');
+        if (adminLink) {
+            adminLink.style.display = 'block';
+            // admin 폴더 안이면 상대경로 조정
+            var isAdmin = window.location.pathname.indexOf('/admin/') !== -1;
+            adminLink.href = isAdmin ? 'users.html' : 'admin/users.html';
+        }
+    }
+}
+
+// DOMContentLoaded에서 자동 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    initNavUserDropdown();
+});

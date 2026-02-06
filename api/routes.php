@@ -8,6 +8,8 @@ require_once __DIR__ . '/handlers/inspect.php';
 require_once __DIR__ . '/handlers/quiz.php';
 require_once __DIR__ . '/handlers/users.php';
 require_once __DIR__ . '/handlers/auth.php';
+require_once __DIR__ . '/handlers/taxonomy.php';
+require_once __DIR__ . '/handlers/rules.php';
 
 // Normalize path: remove query string, strip API mount prefix
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
@@ -84,6 +86,11 @@ if ($method === 'DELETE' && preg_match('#^/users/(\d+)$#', $path, $m)) {
   handle_delete_user((int)$m[1]);
 }
 
+// 회원탈퇴 (본인 계정)
+if ($method === 'POST' && $path === '/users/withdraw') {
+  handle_withdraw_user();
+}
+
 // ===== 인증 API =====
 if ($method === 'POST' && $path === '/auth/login') {
   handle_login();
@@ -91,6 +98,61 @@ if ($method === 'POST' && $path === '/auth/login') {
 
 if ($method === 'GET' && $path === '/auth/user') {
   handle_get_user_by_email();
+}
+
+// ===== 택소노미 API =====
+if ($method === 'GET' && $path === '/taxonomy') {
+  handle_get_taxonomy();
+}
+
+if ($method === 'POST' && $path === '/taxonomy') {
+  handle_create_taxonomy();
+}
+
+if ($method === 'PUT' && preg_match('#^/taxonomy/([A-Z0-9_]+)$#', $path, $m)) {
+  handle_update_taxonomy($m[1]);
+}
+
+if ($method === 'DELETE' && preg_match('#^/taxonomy/([A-Z0-9_]+)$#', $path, $m)) {
+  handle_delete_taxonomy($m[1]);
+}
+
+// ===== 룰셋 버전 API =====
+if ($method === 'GET' && $path === '/rule-set-versions') {
+  handle_get_rule_set_versions();
+}
+
+if ($method === 'POST' && $path === '/rule-set-versions') {
+  handle_create_rule_set_version();
+}
+
+if ($method === 'DELETE' && preg_match('#^/rule-set-versions/(\d+)$#', $path, $m)) {
+  handle_delete_rule_set_version((int)$m[1]);
+}
+
+if ($method === 'PUT' && preg_match('#^/rule-set-versions/(\d+)/activate$#', $path, $m)) {
+  handle_activate_rule_set_version((int)$m[1]);
+}
+
+if ($method === 'PUT' && preg_match('#^/rule-set-versions/(\d+)/deactivate$#', $path, $m)) {
+  handle_deactivate_rule_set_version((int)$m[1]);
+}
+
+// ===== 룰 관리 API =====
+if ($method === 'GET' && $path === '/rules') {
+  handle_get_rules();
+}
+
+if ($method === 'POST' && $path === '/rules') {
+  handle_create_rule();
+}
+
+if ($method === 'PUT' && preg_match('#^/rules/(\d+)$#', $path, $m)) {
+  handle_update_rule((int)$m[1]);
+}
+
+if ($method === 'DELETE' && preg_match('#^/rules/(\d+)$#', $path, $m)) {
+  handle_delete_rule((int)$m[1]);
 }
 
 json_response(['error' => 'Not Found', 'path' => $path], 404);

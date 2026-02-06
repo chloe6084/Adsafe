@@ -16,6 +16,17 @@
                 <div class="d-flex align-items-center gap-3">
                     <a href="adusafe-menu.html" class="nav-link text-decoration-none">AduSafe</a>
                     <a href="learning-dashboard.html" class="nav-link text-decoration-none">학습 현황</a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-custom btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" id="nav-user-btn">
+                            <i class="bi bi-person-circle me-1"></i><span id="nav-user-label">사용자</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" data-role="admin" style="display:none;">어드민 콘솔</a></li>
+                            <li><a class="dropdown-item" href="account.html">계정 설정</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="login.html" id="nav-logout">로그아웃</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -68,10 +79,14 @@
             var reviewCountEl = document.getElementById('review-count');
             var btnStartReview = document.getElementById('btn-start-review');
 
+            // 실제 로그인한 사용자 ID 가져오기
+            var currentUser = window.AdSafeAuth.getCurrentUser();
+            var userId = currentUser && currentUser.id ? currentUser.id : 1;
+
             var ngrokHeaders = { 'ngrok-skip-browser-warning': 'true' };
             
             // API에서 틀린 문제 가져오기
-            fetch(apiBase + '/api/quizzes/wrong?user_id=1&workspace_id=1', { headers: ngrokHeaders })
+            fetch(apiBase + '/api/quizzes/wrong?user_id=' + userId + '&workspace_id=1', { headers: ngrokHeaders })
                 .then(function(res) {
                     if (!res.ok) throw new Error('HTTP ' + res.status);
                     return res.json();
@@ -89,7 +104,7 @@
                             fetch(apiBase + '/api/quiz-attempts', {
                                 method: 'POST',
                                 headers: Object.assign({ 'Content-Type': 'application/json' }, ngrokHeaders),
-                                body: JSON.stringify({ user_id: 1, workspace_id: 1, total_questions: wrongQuestions.length })
+                                body: JSON.stringify({ user_id: userId, workspace_id: 1, total_questions: wrongQuestions.length })
                             })
                             .then(function(res2) { return res2.json(); })
                             .then(function(attemptData) {

@@ -15,12 +15,26 @@ function handle_inspection_history_list(): void {
     $level = isset($_GET['level']) ? trim((string)$_GET['level']) : '';
     $dateFrom = isset($_GET['date_from']) ? trim((string)$_GET['date_from']) : '';
     $dateTo = isset($_GET['date_to']) ? trim((string)$_GET['date_to']) : '';
+    $userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+    $adType = isset($_GET['ad_type']) ? trim((string)$_GET['ad_type']) : '';
 
     $pdo = get_pdo();
 
     // WHERE 조건 구성
     $where = ['workspace_id = ?'];
     $params = [$workspaceId];
+
+    // user_id가 있으면 해당 사용자의 검수 이력만 조회
+    if ($userId > 0) {
+      $where[] = 'created_by = ?';
+      $params[] = $userId;
+    }
+
+    // 광고 유형 필터
+    if ($adType !== '') {
+      $where[] = 'ad_type = ?';
+      $params[] = $adType;
+    }
 
     if ($level !== '' && in_array($level, ['none', 'low', 'medium', 'high'], true)) {
       $where[] = 'risk_summary_level = ?';
@@ -44,7 +58,9 @@ function handle_inspection_history_list(): void {
               total_findings AS totalFindings,
               normalized_text AS normalizedText,
               processing_ms AS processingMs,
-              created_by AS createdBy
+              created_by AS createdBy,
+              ad_type AS adType,
+              ad_title AS adTitle
             FROM inspection_runs
             WHERE {$whereSql}
             ORDER BY created_at DESC
@@ -62,12 +78,13 @@ function handle_inspection_history_list(): void {
 
     $items = array_map(function($r) {
       $norm = (string)($r['normalizedText'] ?? '');
-      $title = mb_substr($norm, 0, 50, 'UTF-8');
-      if (mb_strlen($norm, 'UTF-8') > 50) $title .= '…';
+      // ad_title이 있으면 사용, 없으면 normalizedText에서 추출
+      $title = !empty($r['adTitle']) ? $r['adTitle'] : mb_substr($norm, 0, 50, 'UTF-8');
+      if (empty($r['adTitle']) && mb_strlen($norm, 'UTF-8') > 50) $title .= '…';
       return [
         'id' => (int)$r['id'],
         'date' => $r['date'],
-        'project' => '',
+        'project' => $r['adType'] ?? '',
         'title' => $title,
         'rawText' => $norm,
         'processingMs' => isset($r['processingMs']) ? (int)$r['processingMs'] : null,

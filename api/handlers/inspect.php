@@ -7,6 +7,14 @@ function handle_inspect(): void {
   $body = read_json_body();
   $rawText = isset($body['text']) ? trim((string)$body['text']) : '';
   if ($rawText === '') json_response(['error' => 'text 필드가 필요합니다.'], 400);
+  
+  // 사용자 ID (클라이언트에서 전달, 없으면 1)
+  $userId = isset($body['user_id']) ? (int)$body['user_id'] : 1;
+  if ($userId <= 0) $userId = 1;
+  
+  // 광고 유형 및 제목
+  $adType = isset($body['project']) ? trim((string)$body['project']) : '';
+  $adTitle = isset($body['title']) ? trim((string)$body['title']) : '';
 
   $start = microtime(true);
   $result = adsafe_inspect_run($rawText);
@@ -21,14 +29,16 @@ function handle_inspect(): void {
     try {
       $pdo = get_pdo();
       $workspaceId = 1;
-      $createdBy = 1;
+      $createdBy = $userId;
 
       $stmt = $pdo->prepare(
-        "INSERT INTO inspection_runs (workspace_id, project_id, copy_id, copy_version_no, rule_set_version_id, risk_summary_level, total_findings, normalized_text, processing_ms, created_by)
-         VALUES (?, NULL, NULL, NULL, NULL, ?, ?, ?, ?, ?)"
+        "INSERT INTO inspection_runs (workspace_id, project_id, copy_id, copy_version_no, ad_type, ad_title, rule_set_version_id, risk_summary_level, total_findings, normalized_text, processing_ms, created_by)
+         VALUES (?, NULL, NULL, NULL, ?, ?, NULL, ?, ?, ?, ?, ?)"
       );
       $stmt->execute([
         $workspaceId,
+        $adType ?: null,
+        $adTitle ?: null,
         $result['summary']['level'] ?? 'none',
         (int)($result['summary']['totalFindings'] ?? 0),
         (string)($result['normalizedText'] ?? ''),

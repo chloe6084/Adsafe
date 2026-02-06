@@ -109,10 +109,10 @@ function handle_create_user(): void {
     // 비밀번호 해시
     $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-    // 사용자 생성 (role: viewer가 기본값, ENUM: owner/admin/editor/viewer)
+    // 사용자 생성 (role: editor가 기본값, ENUM: owner/admin/editor/viewer)
     $stmt = $pdo->prepare("
       INSERT INTO users (workspace_id, email, password_hash, name, role, status)
-      VALUES (?, ?, ?, ?, 'viewer', 'active')
+      VALUES (?, ?, ?, ?, 'editor', 'active')
     ");
     $stmt->execute([$workspaceId, $email, $passwordHash, $name]);
     $userId = (int)$pdo->lastInsertId();
@@ -123,7 +123,7 @@ function handle_create_user(): void {
         'id' => $userId,
         'email' => $email,
         'name' => $name,
-        'role' => 'viewer',
+        'role' => 'editor',
         'status' => 'active'
       ]
     ], 201);
@@ -193,7 +193,7 @@ function handle_update_user(int $id): void {
   }
 }
 
-// 사용자 삭제
+// 사용자 삭제 (관리자용)
 function handle_delete_user(int $id): void {
   try {
     $pdo = get_pdo();
@@ -213,5 +213,58 @@ function handle_delete_user(int $id): void {
     json_response(['message' => '사용자가 삭제되었습니다.']);
   } catch (Throwable $e) {
     json_response(['error' => '사용자 삭제 중 오류가 발생했습니다.', 'message' => $e->getMessage()], 500);
+  }
+}
+
+// 회원탈퇴 (본인 계정, 비밀번호 확인 필요)
+function handle_withdraw_user(): void {
+  try {
+    $body = read_json_body();
+    $userId = isset($body['user_id']) ? (int)$body['user_id'] : 0;
+    $password = isset($body['password']) ? (string)$body['password'] : '';
+
+    if ($userId <= 0) {
+      json_response(['error' => '사용자 ID가 필요합니다.'], 400);
+      return;
+    }
+    if ($password === '') {
+      json_response(['error' => '비밀번호를 입력하세요.'], 400);
+      return;
+    }
+
+    $pdo = get_pdo();
+
+    // 사용자 조회
+    $stmt = $pdo->prepare("SELECT user_id, password_hash FROM users WHERE user_id = ?");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch();
+
+    if (!$user) {
+      json_response(['error' => '사용자를 찾을 수 없습니다.'], 404);
+      return;
+    }
+
+    // 비밀번호 확인
+    $validPassword = false;
+    if (password_verify($password, $user['password_hash'])) {
+      $validPassword = true;
+    } else if (hash('sha256', $password) === $user['password_hash']) {
+      $validPassword = true;
+    } else if ($password === $user['password_hash']) {
+      $validPassword = true;
+    }
+
+    if (!$validPassword) {
+      json_response(['error' => '비밀번호가 일치하지 않습니다.'], 401);
+      return;
+    }
+
+    // 사용자 삭제
+    $stmt = $pdo->prepare("DELETE FROM users WHERE user_id = ?");
+    $stmt->execute([$userId]);
+
+    json_response(['message' => '회원탈퇴가 완료되었습니다.']);
+  } catch (Throwable $e) {
+    json_response(['error' => '회원탈퇴 중 오류가 발생했습니다.', 'message' => $e->getMessage()], 500);
   }
 }

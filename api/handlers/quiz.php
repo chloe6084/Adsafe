@@ -95,12 +95,16 @@ function handle_get_wrong_quizzes(): void {
 
     // 최근 틀린 문제 ID 가져오기 (중복 제거)
     $stmt = $pdo->prepare("
-      SELECT DISTINCT qaa.quiz_id
-      FROM quiz_attempt_answers qaa
-      JOIN quiz_attempts qa ON qaa.attempt_id = qa.attempt_id
-      WHERE qa.user_id = ? AND qa.workspace_id = ? AND qaa.is_correct = 0
-      ORDER BY qaa.answered_at DESC
-      LIMIT 20
+      SELECT quiz_id
+      FROM (
+        SELECT qaa.quiz_id, MAX(qaa.answered_at) as last_answered
+        FROM quiz_attempt_answers qaa
+        JOIN quiz_attempts qa ON qaa.attempt_id = qa.attempt_id
+        WHERE qa.user_id = ? AND qa.workspace_id = ? AND qaa.is_correct = 0
+        GROUP BY qaa.quiz_id
+        ORDER BY last_answered DESC
+        LIMIT 20
+      ) AS wrong_quizzes
     ");
     $stmt->execute([$userId, $workspaceId]);
     $wrongIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
