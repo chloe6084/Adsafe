@@ -213,7 +213,16 @@
         if (!dateStr) return '-';
         var d = new Date(dateStr);
         if (isNaN(d.getTime())) return dateStr;
-        return d.getFullYear() + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0');
+        // 한국 시간(KST, UTC+9)으로 표시
+        var options = { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' };
+        var parts = new Intl.DateTimeFormat('ko-KR', options).formatToParts(d);
+        var y = '', m = '', day = '';
+        parts.forEach(function(p) {
+            if (p.type === 'year') y = p.value;
+            if (p.type === 'month') m = p.value;
+            if (p.type === 'day') day = p.value;
+        });
+        return y + '.' + m + '.' + day;
     }
 
     // 룰셋 버전 목록 로드

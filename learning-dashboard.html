@@ -147,7 +147,18 @@
                             if (h.date) {
                                 try {
                                     var d = new Date(h.date);
-                                    dateStr = d.getFullYear() + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+                                    // 한국 시간(KST, UTC+9)으로 표시
+                                    var options = { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false };
+                                    var parts = new Intl.DateTimeFormat('ko-KR', options).formatToParts(d);
+                                    var y = '', m = '', day = '', hh = '', min = '';
+                                    parts.forEach(function(p) {
+                                        if (p.type === 'year') y = p.value;
+                                        if (p.type === 'month') m = p.value;
+                                        if (p.type === 'day') day = p.value;
+                                        if (p.type === 'hour') hh = p.value;
+                                        if (p.type === 'minute') min = p.value;
+                                    });
+                                    dateStr = y + '.' + m + '.' + day + ' ' + hh + ':' + min;
                                 } catch (e) {}
                             }
                             var total = h.totalQuestions || 0;
