@@ -1,3 +1,4 @@
+test 20260206 
 # AdSafe DB ERD (Entity Relationship Diagram)
 
 **ERD** = Entity Relationship Diagram (엔티티·관계 다이어그램)  
