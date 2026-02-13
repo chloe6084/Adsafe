@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>문제 관리 - 어드민 콘솔</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <!-- 네비게이션 -->
+    <nav class="navbar navbar-custom">
+        <div class="container-main">
+            <div class="d-flex justify-content-between align-items-center w-100">
+                <a class="navbar-brand" href="../index.html">AdSafe</a>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="text-primary fw-bold me-2">어드민 콘솔</span>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-custom btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" id="nav-user-btn">
+                            <i class="bi bi-person-circle me-1"></i><span id="nav-user-label">사용자</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="../index.html">메인으로</a></li>
+                            <li><a class="dropdown-item" href="../account.html">계정 설정</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="../login.html" id="nav-logout">로그아웃</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 사이드바 -->
+            <div class="col-md-3 col-lg-2 sidebar-admin">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="users.html">
+                            <i class="bi bi-people me-2"></i>사용자 관리
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="quizzes.html">
+                            <i class="bi bi-question-circle me-2"></i>문제 관리
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="taxonomy.html">
+                            <i class="bi bi-diagram-3 me-2"></i>리스크 유형 관리
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="ruleset.html">
+                            <i class="bi bi-collection me-2"></i>룰셋 버전
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="rules.html">
+                            <i class="bi bi-list-check me-2"></i>룰 관리
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="audit.html">
+                            <i class="bi bi-journal-text me-2"></i>감사 로그
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 메인 컨텐츠 -->
+            <div class="col-md-9 col-lg-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h1 class="mb-2">문제 관리</h1>
+                        <p class="text-muted">AduSafe 모드의 퀴즈 문제를 관리합니다.</p>
+                    </div>
+                    <button class="btn btn-primary-custom" onclick="openCreateModal()">
+                        <i class="bi bi-plus-lg me-2"></i>문제 추가
+                    </button>
+                </div>
+
+                <!-- 필터 -->
+                <div class="card-custom mb-4">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label small">리스크 카테고리</label>
+                            <select class="form-select form-control-custom form-select-sm" id="filter-risk-code">
+                                <option value="">전체</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">난이도</label>
+                            <select class="form-select form-control-custom form-select-sm" id="filter-difficulty">
+                                <option value="">전체</option>
+                                <option value="easy">쉬움</option>
+                                <option value="normal">보통</option>
+                                <option value="hard">어려움</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">상태</label>
+                            <select class="form-select form-control-custom form-select-sm" id="filter-active">
+                                <option value="">전체</option>
+                                <option value="1">활성</option>
+                                <option value="0">비활성</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">검색</label>
+                            <input type="text" class="form-control form-control-custom form-control-sm" id="filter-search" placeholder="문제 내용 검색...">
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-outline-custom btn-sm w-100" onclick="loadQuizzes()">
+                                <i class="bi bi-search me-1"></i>검색
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 문제 목록 -->
+                <div class="card-custom p-0">
+                    <div class="table-responsive">
+                        <table class="table table-custom mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width:50px;">ID</th>
+                                    <th>문제</th>
+                                    <th style="width:120px;">카테고리</th>
+                                    <th style="width:80px;">난이도</th>
+                                    <th style="width:80px;">상태</th>
+                                    <th style="width:140px;">작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quizzes-tbody">
+                                <tr><td colspan="6" class="text-center py-4 text-muted">불러오는 중...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 페이징 -->
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div class="text-muted small" id="page-info">-</div>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 문제 추가/수정 모달 -->
+    <div class="modal fade" id="quizModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="quizModalTitle">문제 추가</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit-quiz-id" value="">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">리스크 카테고리</label>
+                            <select class="form-select form-control-custom" id="quiz-risk-code">
+                                <option value="">선택 안 함</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">난이도</label>
+                            <select class="form-select form-control-custom" id="quiz-difficulty">
+                                <option value="easy">쉬움</option>
+                                <option value="normal" selected>보통</option>
+                                <option value="hard">어려움</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">문제 <span class="text-danger">*</span></label>
+                        <textarea class="form-control form-control-custom" id="quiz-question" rows="3" placeholder="문제 내용을 입력하세요..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">보기 <span class="text-danger">*</span> <small class="text-muted">(정답에 체크)</small></label>
+                        <div id="choices-container">
+                            <div class="input-group mb-2">
+                                <div class="input-group-text"><input type="radio" name="correct-choice" value="0" checked></div>
+                                <span class="input-group-text">1</span>
+                                <input type="text" class="form-control form-control-custom" placeholder="보기 1">
+                            </div>
+                            <div class="input-group mb-2">
+                                <div class="input-group-text"><input type="radio" name="correct-choice" value="1"></div>
+                                <span class="input-group-text">2</span>
+                                <input type="text" class="form-control form-control-custom" placeholder="보기 2">
+                            </div>
+                            <div class="input-group mb-2">
+                                <div class="input-group-text"><input type="radio" name="correct-choice" value="2"></div>
+                                <span class="input-group-text">3</span>
+                                <input type="text" class="form-control form-control-custom" placeholder="보기 3">
+                            </div>
+                            <div class="input-group mb-2">
+                                <div class="input-group-text"><input type="radio" name="correct-choice" value="3"></div>
+                                <span class="input-group-text">4</span>
+                                <input type="text" class="form-control form-control-custom" placeholder="보기 4">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">해설</label>
+                        <textarea class="form-control form-control-custom" id="quiz-explanation" rows="2" placeholder="정답 해설을 입력하세요..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">출처/참조</label>
+                        <input type="text" class="form-control form-control-custom" id="quiz-source" placeholder="예: 의료법 제56조">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-custom" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary-custom" id="btn-save-quiz" onclick="saveQuiz()">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-notice">
+        <div class="container-main">
+            본 서비스는 참고용이며 법적 판정이 아닙니다. 최종 책임은 사용자에게 있습니다.
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../main.js"></script>
+    <script>
+    (function() {
+        var user = window.AdSafeAuth ? window.AdSafeAuth.getCurrentUser() : null;
+        if (!user || (user.role !== 'admin' && user.role !== 'owner')) {
+            window.location.href = '../login.html';
+            return;
+        }
+
+        var apiBase = (window.ADSAFE_API_URL || '').replace(/\/$/, '') + '/api';
+        var headers = Object.assign({ 'Content-Type': 'application/json' }, window.ADSAFE_FETCH_HEADERS || {});
+        var currentPage = 1;
+        var pageLimit = 15;
+
+        // 네비게이션 초기화
+        initNavUserDropdown();
+
+        function loadTaxonomy() {
+            fetch(apiBase + '/taxonomy', { headers: headers })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var list = data.taxonomy || data;
+                    if (!Array.isArray(list)) return;
+                    var selects = [document.getElementById('filter-risk-code'), document.getElementById('quiz-risk-code')];
+                    list.forEach(function(t) {
+                        selects.forEach(function(sel) {
+                            var opt = document.createElement('option');
+                            opt.value = t.risk_code || t.riskCode;
+                            opt.textContent = (t.level_3 || t.level3 || t.risk_code || t.riskCode);
+                            sel.appendChild(opt);
+                        });
+                    });
+                })
+                .catch(function() {});
+        }
+
+        function loadQuizzes(page) {
+            currentPage = page || 1;
+            var params = new URLSearchParams({
+                page: currentPage,
+                limit: pageLimit,
+            });
+            var rc = document.getElementById('filter-risk-code').value;
+            var df = document.getElementById('filter-difficulty').value;
+            var ac = document.getElementById('filter-active').value;
+            var sr = document.getElementById('filter-search').value;
+            if (rc) params.set('risk_code', rc);
+            if (df) params.set('difficulty', df);
+            if (ac !== '') params.set('is_active', ac);
+            if (sr) params.set('search', sr);
+
+            var tbody = document.getElementById('quizzes-tbody');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">불러오는 중...</td></tr>';
+
+            fetch(apiBase + '/admin/quizzes?' + params.toString(), { headers: headers })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.quizzes || data.quizzes.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">문제가 없습니다.</td></tr>';
+                        document.getElementById('page-info').textContent = '총 0건';
+                        document.getElementById('pagination').innerHTML = '';
+                        return;
+                    }
+                    tbody.innerHTML = '';
+                    data.quizzes.forEach(function(q) {
+                        var tr = document.createElement('tr');
+                        var diffBadge = { easy: '<span class="badge bg-success">쉬움</span>', normal: '<span class="badge bg-warning text-dark">보통</span>', hard: '<span class="badge bg-danger">어려움</span>' };
+                        var statusBadge = q.is_active == 1 ? '<span class="badge bg-success">활성</span>' : '<span class="badge bg-secondary">비활성</span>';
+                        var category = q.level_3 || q.riskCode || '-';
+                        tr.innerHTML =
+                            '<td class="text-muted small">' + q.quiz_id + '</td>' +
+                            '<td><div class="text-truncate" style="max-width:400px;" title="' + escapeHtml(q.question) + '">' + escapeHtml(q.question) + '</div></td>' +
+                            '<td><span class="small">' + escapeHtml(category) + '</span></td>' +
+                            '<td>' + (diffBadge[q.difficulty] || q.difficulty) + '</td>' +
+                            '<td>' + statusBadge + '</td>' +
+                            '<td class="text-nowrap">' +
+                                '<button class="btn btn-sm btn-outline-custom me-1" onclick="openEditModal(' + q.quiz_id + ')" title="수정"><i class="bi bi-pencil"></i></button>' +
+                                '<button class="btn btn-sm btn-outline-custom me-1" onclick="toggleQuiz(' + q.quiz_id + ')" title="활성/비활성"><i class="bi bi-toggle-on"></i></button>' +
+                                '<button class="btn btn-sm btn-outline-danger" onclick="deleteQuiz(' + q.quiz_id + ')" title="삭제"><i class="bi bi-trash"></i></button>' +
+                            '</td>';
+                        tbody.appendChild(tr);
+                    });
+                    // 페이지 정보
+                    var total = data.total || 0;
+                    var from = (currentPage - 1) * pageLimit + 1;
+                    var to = Math.min(currentPage * pageLimit, total);
+                    document.getElementById('page-info').textContent = '총 ' + total + '건 (표시: ' + from + '-' + to + ')';
+                    renderPagination(total);
+                })
+                .catch(function(err) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">오류: ' + err.message + '</td></tr>';
+                });
+        };
+
+        function renderPagination(total) {
+            var totalPages = Math.ceil(total / pageLimit);
+            var nav = document.getElementById('pagination');
+            nav.innerHTML = '';
+            if (totalPages <= 1) return;
+            for (var i = 1; i <= totalPages; i++) {
+                var li = document.createElement('li');
+                li.className = 'page-item' + (i === currentPage ? ' active' : '');
+                li.innerHTML = '<a class="page-link" href="#" onclick="loadQuizzes(' + i + ');return false;">' + i + '</a>';
+                nav.appendChild(li);
+            }
+        }
+
+        function openCreateModal() {
+            document.getElementById('quizModalTitle').textContent = '문제 추가';
+            document.getElementById('edit-quiz-id').value = '';
+            document.getElementById('quiz-question').value = '';
+            document.getElementById('quiz-risk-code').value = '';
+            document.getElementById('quiz-difficulty').value = 'normal';
+            document.getElementById('quiz-explanation').value = '';
+            document.getElementById('quiz-source').value = '';
+            // 보기 초기화
+            var inputs = document.querySelectorAll('#choices-container input[type="text"]');
+            inputs.forEach(function(inp) { inp.value = ''; });
+            document.querySelector('input[name="correct-choice"][value="0"]').checked = true;
+            new bootstrap.Modal(document.getElementById('quizModal')).show();
+        };
+
+        function openEditModal(quizId) {
+            fetch(apiBase + '/admin/quizzes/' + quizId, { headers: headers })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.error) { alert(data.error); return; }
+                    document.getElementById('quizModalTitle').textContent = '문제 수정 (#' + quizId + ')';
+                    document.getElementById('edit-quiz-id').value = quizId;
+                    document.getElementById('quiz-question').value = data.question || '';
+                    document.getElementById('quiz-risk-code').value = data.category_risk_code || '';
+                    document.getElementById('quiz-difficulty').value = data.difficulty || 'normal';
+                    document.getElementById('quiz-explanation').value = data.explanation || '';
+                    document.getElementById('quiz-source').value = data.source_ref || '';
+                    // 보기
+                    var inputs = document.querySelectorAll('#choices-container input[type="text"]');
+                    var radios = document.querySelectorAll('input[name="correct-choice"]');
+                    var choices = data.choices || [];
+                    inputs.forEach(function(inp, i) {
+                        inp.value = (choices[i] && choices[i].choice_text) ? choices[i].choice_text : '';
+                    });
+                    radios.forEach(function(r, i) {
+                        r.checked = (choices[i] && choices[i].is_correct == 1);
+                    });
+                    new bootstrap.Modal(document.getElementById('quizModal')).show();
+                })
+                .catch(function(err) { alert('문제 로드 실패: ' + err.message); });
+        };
+
+        function saveQuiz() {
+            var quizId = document.getElementById('edit-quiz-id').value;
+            var question = document.getElementById('quiz-question').value.trim();
+            var riskCode = document.getElementById('quiz-risk-code').value;
+            var difficulty = document.getElementById('quiz-difficulty').value;
+            var explanation = document.getElementById('quiz-explanation').value.trim();
+            var sourceRef = document.getElementById('quiz-source').value.trim();
+
+            if (!question) { alert('문제 내용을 입력하세요.'); return; }
+
+            var choiceInputs = document.querySelectorAll('#choices-container input[type="text"]');
+            var correctRadio = document.querySelector('input[name="correct-choice"]:checked');
+            var correctIdx = correctRadio ? parseInt(correctRadio.value) : 0;
+
+            var choices = [];
+            var hasText = false;
+            choiceInputs.forEach(function(inp, i) {
+                var text = inp.value.trim();
+                if (text) hasText = true;
+                choices.push({ text: text, isCorrect: (i === correctIdx) });
+            });
+            // 빈 보기 제거
+            choices = choices.filter(function(c) { return c.text !== ''; });
+
+            if (choices.length < 2) { alert('보기를 최소 2개 입력하세요.'); return; }
+            if (!choices.some(function(c) { return c.isCorrect; })) {
+                // correctIdx가 빈 보기를 가리키고 있는 경우
+                choices[0].isCorrect = true;
+            }
+
+            var body = { question: question, riskCode: riskCode, difficulty: difficulty, explanation: explanation, sourceRef: sourceRef, choices: choices };
+
+            var btn = document.getElementById('btn-save-quiz');
+            btn.disabled = true;
+            btn.textContent = '저장 중...';
+
+            var method = quizId ? 'PUT' : 'POST';
+            var url = quizId ? (apiBase + '/admin/quizzes/' + quizId) : (apiBase + '/admin/quizzes');
+
+            fetch(url, { method: method, headers: headers, body: JSON.stringify(body) })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    btn.disabled = false;
+                    btn.textContent = '저장';
+                    if (data.error) { alert('저장 실패: ' + data.error); return; }
+                    bootstrap.Modal.getInstance(document.getElementById('quizModal')).hide();
+                    loadQuizzes(currentPage);
+                })
+                .catch(function(err) {
+                    btn.disabled = false;
+                    btn.textContent = '저장';
+                    alert('저장 실패: ' + err.message);
+                });
+        };
+
+        function toggleQuiz(quizId) {
+            fetch(apiBase + '/admin/quizzes/' + quizId + '/toggle', { method: 'PUT', headers: headers })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.error) { alert(data.error); return; }
+                    loadQuizzes(currentPage);
+                })
+                .catch(function(err) { alert('토글 실패: ' + err.message); });
+        };
+
+        function deleteQuiz(quizId) {
+            if (!confirm('정말 이 문제를 삭제하시겠습니까? (ID: ' + quizId + ')')) return;
+            fetch(apiBase + '/admin/quizzes/' + quizId, { method: 'DELETE', headers: headers })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.error) { alert(data.error); return; }
+                    loadQuizzes(currentPage);
+                })
+                .catch(function(err) { alert('삭제 실패: ' + err.message); });
+        };
+
+        function escapeHtml(s) {
+            if (!s) return '';
+            var div = document.createElement('div');
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        // Enter 키로 검색
+        document.getElementById('filter-search').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') loadQuizzes();
+        });
+
+        // window에 등록 (HTML onclick에서 호출하기 위함)
+        window.loadQuizzes = loadQuizzes;
+        window.openCreateModal = openCreateModal;
+        window.openEditModal = openEditModal;
+        window.saveQuiz = saveQuiz;
+        window.toggleQuiz = toggleQuiz;
+        window.deleteQuiz = deleteQuiz;
+
+        // 초기 데이터 로드 (모든 함수 정의 후 실행)
+        loadTaxonomy();
+        loadQuizzes();
+    })();
+    </script>
+</body>
+</html>

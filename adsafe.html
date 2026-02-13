@@ -15,6 +15,7 @@
             <div class="d-flex justify-content-between align-items-center w-100">
                 <a class="navbar-brand" href="index.html">AdSafe</a>
                 <div class="d-flex align-items-center gap-3">
+                    <a href="ai-copywriter.html" class="nav-link text-decoration-none"><i class="bi bi-stars me-1"></i>AI 문구생성</a>
                     <a href="inspection-history.html" class="nav-link text-decoration-none">검수 이력</a>
                     <a href="learning-dashboard.html" class="nav-link text-decoration-none">학습 현황</a>
                     <div class="dropdown">
@@ -35,9 +36,15 @@
 
     <!-- 메인 컨텐츠 -->
     <div class="container-main py-5">
-        <div class="mb-4">
-            <h1 class="mb-2">AdSafe 검수</h1>
-            <p class="text-muted">광고 문구를 입력하고 규제 리스크를 검수하세요.</p>
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div>
+                <h1 class="mb-2">AdSafe 검수</h1>
+                <p class="text-muted">광고 문구를 입력하고 규제 리스크를 검수하세요.</p>
+            </div>
+            <div id="credit-badge" style="display:inline-flex;align-items:center;gap:6px;background:rgba(49,130,246,0.08);border:1px solid rgba(49,130,246,0.2);border-radius:20px;padding:4px 14px;font-size:13px;color:#3182F6;font-weight:500;">
+                <i class="bi bi-lightning-charge-fill"></i>
+                <span id="credit-text">-</span>
+            </div>
         </div>
 
         <!-- 입력 영역 -->
@@ -83,7 +90,24 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/auth.js"></script>
-    <script>if(!window.AdSafeAuth.getCurrentUser()){window.location.href='login.html';}</script>
+    <script>
+    if(!window.AdSafeAuth.getCurrentUser()){window.location.href='login.html';}
+    // 크레딧 정보 표시
+    (function(){
+        var user = window.AdSafeAuth.getCurrentUser();
+        if(!user) return;
+        var apiBase = (window.ADSAFE_API_URL || '').replace(/\/$/, '') + '/api';
+        fetch(apiBase + '/credits/balance?user_id=' + user.id, {
+            headers: Object.assign({}, window.ADSAFE_FETCH_HEADERS || {})
+        }).then(function(r){return r.json();}).then(function(data){
+            var el = document.getElementById('credit-text');
+            if(!el || data.error) return;
+            var ins = data.daily && data.daily.inspect ? data.daily.inspect : {};
+            if(ins.limit === -1) { el.textContent = '검수 무제한'; }
+            else { el.textContent = '오늘 ' + (ins.used||0) + '/' + (ins.limit||5) + '회 사용'; }
+        }).catch(function(){});
+    })();
+    </script>
     <script src="js/normalize.js?v=2"></script>
     <script src="js/rules-data.js?v=2"></script>
     <script src="js/inspection-engine.js?v=2"></script>

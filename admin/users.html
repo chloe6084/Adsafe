@@ -43,6 +43,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="quizzes.html">
+                            <i class="bi bi-question-circle me-2"></i>문제 관리
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="taxonomy.html">
                             <i class="bi bi-diagram-3 me-2"></i>리스크 유형 관리
                         </a>
@@ -98,6 +103,7 @@
                                             <th>이름</th>
                                             <th>이메일</th>
                                             <th>권한</th>
+                                            <th>요금제</th>
                                             <th>상태</th>
                                             <th>가입일</th>
                                             <th>작업</th>
@@ -199,6 +205,30 @@
                                 <option value="disabled">비활성</option>
                             </select>
                         </div>
+                        <hr>
+                        <h6 class="mb-3"><i class="bi bi-lightning-charge me-1"></i>크레딧 관리</h6>
+                        <div class="mb-3">
+                            <label for="edit-plan" class="form-label">요금제</label>
+                            <select class="form-select form-control-custom" id="edit-plan">
+                                <option value="free">무료 (Free)</option>
+                                <option value="pro">Pro (유료)</option>
+                                <option value="admin">관리자 (무제한)</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">현재 잔여 크레딧</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary" id="edit-credit-balance">-</span>
+                                <span class="small text-muted" id="edit-credit-daily">-</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">크레딧 부여</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control form-control-custom" id="edit-grant-amount" min="1" value="10" placeholder="부여할 크레딧">
+                                <button type="button" class="btn btn-outline-custom" id="btn-grant-credit">부여</button>
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -265,16 +295,16 @@
         var tbody = document.getElementById('users-tbody');
         if (!tbody || typeof window.AdSafeAuth === 'undefined') return;
         
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">불러오는 중...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">불러오는 중...</td></tr>';
         
         // API에서 사용자 목록 가져오기
         window.AdSafeAuth.getUsers(function(err, list) {
             if (err) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">오류: ' + escapeHtml(err) + '</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">오류: ' + escapeHtml(err) + '</td></tr>';
                 return;
             }
             if (!list || list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">사용자가 없습니다.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">사용자가 없습니다.</td></tr>';
                 return;
             }
             
@@ -290,6 +320,7 @@
                     '<td>' + escapeHtml(u.name || u.email) + '</td>' +
                     '<td>' + escapeHtml(u.email) + '</td>' +
                     '<td><span class="badge ' + roleBadge(role) + '">' + escapeHtml(roleLabel(role)) + '</span></td>' +
+                    '<td><span class="badge bg-light text-dark plan-badge" data-user-id="' + u.id + '">-</span></td>' +
                     '<td>' + statusBadge + '</td>' +
                     '<td>' + formatDate(u.createdAt) + '</td>' +
                     '<td><button type="button" class="btn btn-sm btn-outline-custom btn-edit-user" data-id="' + u.id + '" data-email="' + escapeHtml(u.email) + '" data-role="' + escapeHtml(role) + '" data-status="' + escapeHtml(status) + '">수정</button></td>';
@@ -384,10 +415,97 @@
         });
     }
 
+    var apiBase = (window.ADSAFE_API_URL || '').replace(/\/$/, '') + '/api';
+    var fetchHeaders = Object.assign({ 'Content-Type': 'application/json' }, window.ADSAFE_FETCH_HEADERS || {});
+
+    // 테이블 렌더 후 각 사용자의 플랜 배지를 로드
+    function loadPlanBadges() {
+        document.querySelectorAll('.plan-badge[data-user-id]').forEach(function(badge) {
+            var uid = badge.getAttribute('data-user-id');
+            fetch(apiBase + '/credits/balance?user_id=' + uid, { headers: fetchHeaders })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.planCode) {
+                        var planMap = { free: 'Free', pro: 'Pro', admin: '관리자' };
+                        badge.textContent = planMap[data.planCode] || data.planCode;
+                        if (data.planCode === 'pro') badge.className = 'badge bg-primary';
+                        else if (data.planCode === 'admin') badge.className = 'badge bg-warning text-dark';
+                        else badge.className = 'badge bg-light text-dark';
+                    }
+                })
+                .catch(function() {});
+        });
+    }
+
+    // 수정 모달 열릴 때 크레딧 정보 로드
+    var origOpenEditModal = openEditModal;
+    openEditModal = function(e) {
+        origOpenEditModal.call(this, e);
+        var btn = e.currentTarget;
+        var userId = btn.getAttribute('data-id');
+        // 크레딧 정보 로드
+        fetch(apiBase + '/credits/balance?user_id=' + userId, { headers: fetchHeaders })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.planCode) document.getElementById('edit-plan').value = data.planCode;
+                document.getElementById('edit-credit-balance').textContent = (data.creditBalance != null ? data.creditBalance : 0) + ' 크레딧';
+                var ai = data.daily && data.daily.aiGenerate ? data.daily.aiGenerate : {};
+                var inspect = data.daily && data.daily.inspect ? data.daily.inspect : {};
+                document.getElementById('edit-credit-daily').textContent = 
+                    '오늘 검수 ' + (inspect.used||0) + '/' + (inspect.limit === -1 ? '∞' : inspect.limit||0) + 
+                    ' · AI ' + (ai.used||0) + '/' + (ai.limit === -1 ? '∞' : ai.limit||0);
+            })
+            .catch(function() {
+                document.getElementById('edit-credit-balance').textContent = '-';
+                document.getElementById('edit-credit-daily').textContent = '-';
+            });
+    };
+
+    // 크레딧 부여 버튼
+    document.getElementById('btn-grant-credit').addEventListener('click', function() {
+        var userId = currentEditUserId;
+        if (!userId) return;
+        var amount = parseInt(document.getElementById('edit-grant-amount').value || '0');
+        if (amount <= 0) { alert('부여할 크레딧을 입력하세요.'); return; }
+
+        var currentUser = window.AdSafeAuth ? window.AdSafeAuth.getCurrentUser() : null;
+        var adminId = currentUser ? currentUser.id : 0;
+
+        fetch(apiBase + '/credits/grant', {
+            method: 'POST',
+            headers: fetchHeaders,
+            body: JSON.stringify({ target_user_id: parseInt(userId), amount: amount, admin_user_id: adminId, description: '관리자 수동 부여' })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) { alert('부여 실패: ' + data.error); return; }
+            alert('크레딧 ' + amount + '개가 부여되었습니다. (잔액: ' + data.newBalance + ')');
+            document.getElementById('edit-credit-balance').textContent = data.newBalance + ' 크레딧';
+        })
+        .catch(function(err) { alert('부여 실패: ' + err.message); });
+    });
+
+    // 저장 시 플랜 변경도 함께 처리
+    var origSaveHandler = document.getElementById('editUserSave').onclick;
+    document.getElementById('editUserSave').addEventListener('click', function() {
+        if (!currentEditUserId) return;
+        var newPlan = document.getElementById('edit-plan').value;
+        var currentUser = window.AdSafeAuth ? window.AdSafeAuth.getCurrentUser() : null;
+        var adminId = currentUser ? currentUser.id : 0;
+
+        // 플랜 변경 (비동기, 실패해도 진행)
+        fetch(apiBase + '/credits/plan', {
+            method: 'PUT',
+            headers: fetchHeaders,
+            body: JSON.stringify({ target_user_id: parseInt(currentEditUserId), plan_code: newPlan, admin_user_id: adminId })
+        }).catch(function() {});
+    });
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', renderTable);
+        document.addEventListener('DOMContentLoaded', function() { renderTable(); setTimeout(loadPlanBadges, 500); });
     } else {
         renderTable();
+        setTimeout(loadPlanBadges, 500);
     }
 })();
     </script>

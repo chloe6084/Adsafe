@@ -58,8 +58,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: Object.assign({ 'Content-Type': 'application/json' }, window.ADSAFE_FETCH_HEADERS || {}),
                 body: JSON.stringify({ text: rawText, project: project || '', title: title || '', user_id: userId })
             }).then(function(res) {
-                if (!res.ok) throw new Error('검수 요청 실패: ' + res.status);
-                return res.json();
+                return res.json().then(function(data) {
+                    if (!res.ok) {
+                        if (res.status === 403 && data.available === false) {
+                            throw new Error(data.error || '일일 사용 한도에 도달했습니다. 플랜을 업그레이드하세요.');
+                        }
+                        throw new Error(data.error || '검수 요청 실패: ' + res.status);
+                    }
+                    return data;
+                });
             }).then(function(data) {
                 renderInspectionResultWithData(data, rawText);
                 if (data.saveError) {

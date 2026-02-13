@@ -4,7 +4,7 @@ declare(strict_types=1);
 // Basic CORS (same-origin이면 필요 없지만, 안전하게 유지)
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type');
-header('Access-Control-Allow-Methods: GET,POST,OPTIONS');
+header('Access-Control-Allow-Methods: GET,POST,PUT,DELETE,OPTIONS');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
   http_response_code(204);

@@ -312,6 +312,32 @@ body {
     color: #0d9488;
 }
 
+/* AI 카피라이터 카드 */
+.index-mode-card--ai .index-mode-card__icon {
+    background: rgba(139, 92, 246, 0.12);
+    color: #8B5CF6;
+}
+
+.index-mode-card--ai:hover {
+    border-color: #8B5CF6;
+    box-shadow: 0 12px 24px rgba(139, 92, 246, 0.15);
+}
+
+.index-mode-card--ai:hover .index-mode-card__action {
+    color: #8B5CF6;
+}
+
+/* 3열 그리드 */
+.index-mode-grid--3col {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 992px) {
+    .index-mode-grid--3col {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* 폼 */
 .form-control-custom {
     border: 1px solid var(--gray-300);

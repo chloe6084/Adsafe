@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 function handle_inspect(): void {
   require_once __DIR__ . '/../engine/inspection_engine.php';
+  require_once __DIR__ . '/credits.php';
 
   $body = read_json_body();
   $rawText = isset($body['text']) ? trim((string)$body['text']) : '';
@@ -11,6 +12,23 @@ function handle_inspect(): void {
   // 사용자 ID (클라이언트에서 전달, 없으면 1)
   $userId = isset($body['user_id']) ? (int)$body['user_id'] : 1;
   if ($userId <= 0) $userId = 1;
+
+  // 크레딧/한도 확인
+  try {
+    $pdo = get_pdo();
+    $check = check_feature_available($pdo, $userId, 'inspect');
+    if (!$check['available']) {
+      json_response([
+        'error' => $check['reason'],
+        'available' => false,
+        'plan' => $check['plan'] ?? 'free',
+        'daily' => $check,
+      ], 403);
+      return;
+    }
+  } catch (Throwable $e) {
+    // 크레딧 체크 실패 시에도 검수 진행 (graceful)
+  }
   
   // 광고 유형 및 제목
   $adType = isset($body['project']) ? trim((string)$body['project']) : '';
@@ -74,6 +92,15 @@ function handle_inspect(): void {
       if (!isset($result['runId'])) $result['runId'] = null;
       $result['saveError'] = $e->getMessage();
     }
+  }
+
+  // 크레딧 카운터 증가
+  try {
+    $pdoCredit = get_pdo();
+    ensure_user_credits($pdoCredit, $userId);
+    $pdoCredit->prepare("UPDATE user_credits SET daily_inspect_used = daily_inspect_used + 1 WHERE user_id = ?")->execute([$userId]);
+  } catch (Throwable $e) {
+    // 무시 (graceful)
   }
 
   json_response($result);

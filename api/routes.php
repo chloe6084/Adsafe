@@ -10,6 +10,9 @@ require_once __DIR__ . '/handlers/users.php';
 require_once __DIR__ . '/handlers/auth.php';
 require_once __DIR__ . '/handlers/taxonomy.php';
 require_once __DIR__ . '/handlers/rules.php';
+require_once __DIR__ . '/handlers/credits.php';
+require_once __DIR__ . '/handlers/ai_generate.php';
+require_once __DIR__ . '/handlers/quiz_admin.php';
 
 // Normalize path: remove query string, strip API mount prefix
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
@@ -153,6 +156,73 @@ if ($method === 'PUT' && preg_match('#^/rules/(\d+)$#', $path, $m)) {
 
 if ($method === 'DELETE' && preg_match('#^/rules/(\d+)$#', $path, $m)) {
   handle_delete_rule((int)$m[1]);
+}
+
+// ===== 크레딧 API =====
+if ($method === 'GET' && $path === '/credits/balance') {
+  handle_get_credit_balance();
+}
+
+if ($method === 'GET' && $path === '/credits/plans') {
+  handle_get_credit_plans();
+}
+
+if ($method === 'POST' && $path === '/credits/check') {
+  handle_check_credit();
+}
+
+if ($method === 'POST' && $path === '/credits/use') {
+  handle_use_credit();
+}
+
+if ($method === 'POST' && $path === '/credits/grant') {
+  handle_grant_credit();
+}
+
+if ($method === 'PUT' && $path === '/credits/plan') {
+  handle_change_plan();
+}
+
+if ($method === 'GET' && $path === '/credits/transactions') {
+  handle_get_credit_transactions();
+}
+
+// ===== AI 광고문구 생성 API =====
+if ($method === 'POST' && $path === '/ai/generate') {
+  handle_ai_generate();
+}
+
+if ($method === 'GET' && $path === '/ai/history') {
+  handle_ai_history_list();
+}
+
+if ($method === 'GET' && preg_match('#^/ai/history/(\d+)$#', $path, $m)) {
+  handle_ai_history_detail((int)$m[1]);
+}
+
+// ===== 관리자 퀴즈 관리 API =====
+if ($method === 'GET' && $path === '/admin/quizzes') {
+  handle_admin_get_quizzes();
+}
+
+if ($method === 'GET' && preg_match('#^/admin/quizzes/(\d+)$#', $path, $m)) {
+  handle_admin_get_quiz((int)$m[1]);
+}
+
+if ($method === 'POST' && $path === '/admin/quizzes') {
+  handle_admin_create_quiz();
+}
+
+if ($method === 'PUT' && preg_match('#^/admin/quizzes/(\d+)$#', $path, $m)) {
+  handle_admin_update_quiz((int)$m[1]);
+}
+
+if ($method === 'DELETE' && preg_match('#^/admin/quizzes/(\d+)$#', $path, $m)) {
+  handle_admin_delete_quiz((int)$m[1]);
+}
+
+if ($method === 'PUT' && preg_match('#^/admin/quizzes/(\d+)/toggle$#', $path, $m)) {
+  handle_admin_toggle_quiz((int)$m[1]);
 }
 
 json_response(['error' => 'Not Found', 'path' => $path], 404);
