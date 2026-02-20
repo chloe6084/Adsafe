@@ -49,14 +49,16 @@ function handle_inspect(): void {
       $workspaceId = 1;
       $createdBy = $userId;
 
+      $ruleSetVersionId = $result['rule_set_version_id'] ?? null;
       $stmt = $pdo->prepare(
         "INSERT INTO inspection_runs (workspace_id, project_id, copy_id, copy_version_no, ad_type, ad_title, rule_set_version_id, risk_summary_level, total_findings, normalized_text, processing_ms, created_by)
-         VALUES (?, NULL, NULL, NULL, ?, ?, NULL, ?, ?, ?, ?, ?)"
+         VALUES (?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?)"
       );
       $stmt->execute([
         $workspaceId,
         $adType ?: null,
         $adTitle ?: null,
+        $ruleSetVersionId,
         $result['summary']['level'] ?? 'none',
         (int)($result['summary']['totalFindings'] ?? 0),
         (string)($result['normalizedText'] ?? ''),
@@ -70,7 +72,7 @@ function handle_inspect(): void {
       if ($runId > 0 && is_array($findings) && count($findings) > 0) {
         $stmtF = $pdo->prepare(
           "INSERT INTO inspection_findings (run_id, risk_code, risk_level, rule_id, match_type, matched_text, explanation_body, suggestion)
-           VALUES (?, ?, ?, NULL, 'keyword', ?, ?, ?)"
+           VALUES (?, ?, ?, ?, 'keyword', ?, ?, ?)"
         );
         foreach ($findings as $f) {
           $matched = (string)($f['matchedText'] ?? '');
@@ -81,6 +83,7 @@ function handle_inspect(): void {
             $runId,
             (string)($f['riskCode'] ?? ''),
             (string)($f['riskLevel'] ?? 'medium'),
+            isset($f['rule_id']) && $f['rule_id'] !== null ? (int)$f['rule_id'] : null,
             $matched,
             (string)($f['explanation'] ?? ''),
             (string)($f['suggestion'] ?? ''),

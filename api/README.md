@@ -20,7 +20,7 @@ cp .env.example .env
 
 | 변수 | 설명 |
 | --- | --- |
-| PORT | (Node용으로 남아있을 수 있음) PHP 실행에는 불필요 |
+| BASE_URL | (선택) test-inspect-save.php 등에서 사용. 기본 http://localhost/AdSafe |
 | DB_HOST | Aiven MySQL 호스트 |
 | DB_PORT | 포트 (예: 20255) |
 | DB_USER | 사용자 (예: avnadmin) |
@@ -36,17 +36,18 @@ Aiven은 SSL이 필수이므로, 콘솔에서 **CA certificate**를 다운로드
 
 검수 결과를 DB에 저장하려면 **workspace 1건, 사용자 1건, risk_taxonomy**가 필요합니다.
 
-현재 시드는 Node 스크립트로 제공됩니다(런타임은 PHP라서 Node는 “초기 1회”만 필요).  
+시드는 PHP CLI로 실행합니다. Node·Express는 사용하지 않습니다(런타임은 PHP라서 Node는 “초기 1회”만 필요).  
 실행(선택):
 
 ```bash
-cd c:\xampp\htdocs\AdSafe\api
-npm run seed
+php api/scripts/seed.php
 ```
+
+(프로젝트 루트에서 실행. Node·Express 미사용.)
 
 - `workspaces`에 1건 (기본 조직)
 - `users`에 1건 (admin@adsafe.com, 비밀번호 기본 `Admin123!` — `.env`에 `SEED_ADMIN_PASSWORD`로 변경 가능)
-- `risk_taxonomy`에 ADU_RULES 기준 리스크 코드 반영
+- `risk_taxonomy`, `rule_set_versions`, `rules`, `quizzes`, `quiz_choices` 반영. DB 진단: `php api/scripts/check-db.php`, 저장 테스트: `php api/scripts/test-inspect-save.php`
 
 ---
 
@@ -88,3 +89,7 @@ XAMPP에서 **Apache**를 켠 뒤, 아래가 열리면 정상입니다.
 2. **검수 이력** 목록/상세는 `GET /api/inspection-history` 로 조회
 
 프론트는 **80 포트( Apache )** 기준으로 동작하며, `ADSAFE_API_URL` 이 비어 있으면 같은 호스트의 `/AdSafe/api` 로 요청합니다.
+
+---
+
+minif 브랜치 워크플로우는 `docs/git-workflow-vlackholism5.md` 참고.

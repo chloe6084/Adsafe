@@ -1,31 +1,11 @@
 <?php
 declare(strict_types=1);
 
-// Basic CORS (same-origin이면 필요 없지만, 안전하게 유지)
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Access-Control-Allow-Methods: GET,POST,PUT,DELETE,OPTIONS');
+/**
+ * CLI 전용: .env 로드 및 PDO 생성 (헤더 출력 없음).
+ * seed.php, check-db.php 등에서 사용.
+ */
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-  http_response_code(204);
-  exit;
-}
-
-function json_response($data, int $status = 200): void {
-  http_response_code($status);
-  header('Content-Type: application/json; charset=utf-8');
-  echo json_encode($data, JSON_UNESCAPED_UNICODE);
-  exit;
-}
-
-function read_json_body(): array {
-  $raw = file_get_contents('php://input');
-  if ($raw === false || trim($raw) === '') return [];
-  $decoded = json_decode($raw, true);
-  return is_array($decoded) ? $decoded : [];
-}
-
-// api/.env 파서 (Node용 .env를 그대로 재사용)
 function load_env_file(string $path): array {
   if (!file_exists($path)) return [];
   $lines = file($path, FILE_IGNORE_NEW_LINES);
@@ -38,11 +18,9 @@ function load_env_file(string $path): array {
     if ($eq === false) continue;
     $k = trim(substr($line, 0, $eq));
     $v = trim(substr($line, $eq + 1));
-    $v = str_replace("\r", '', $v); // CRLF 저장 시 비밀번호 등 끝에 \r 남는 것 방지
-    // strip inline comments
+    $v = str_replace("\r", '', $v);
     $hash = strpos($v, '#');
     if ($hash !== false) $v = trim(substr($v, 0, $hash));
-    // strip quotes
     $v = preg_replace('/^["\']|["\']$/', '', $v);
     if ($k !== '') $out[$k] = $v;
   }
@@ -62,10 +40,8 @@ function pdo_from_env(array $env): PDO {
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
   ];
 
-  // Aiven SSL CA
   if (!empty($env['DB_SSL_CA'])) {
     $ca = $env['DB_SSL_CA'];
-    // 상대경로면 api 폴더 기준
     if (!preg_match('/^[A-Za-z]:\\\\|^\//', $ca)) {
       $ca = realpath(__DIR__ . '/..' . DIRECTORY_SEPARATOR . $ca) ?: $ca;
     }
@@ -77,11 +53,11 @@ function pdo_from_env(array $env): PDO {
   return new PDO($dsn, $user, $pass, $options);
 }
 
-function get_pdo(): PDO {
+function get_pdo_cli(): PDO {
   static $pdo = null;
   if ($pdo instanceof PDO) return $pdo;
-  $env = load_env_file(__DIR__ . '/../.env');
+  $envPath = __DIR__ . '/../.env';
+  $env = load_env_file($envPath);
   $pdo = pdo_from_env($env);
   return $pdo;
 }
-

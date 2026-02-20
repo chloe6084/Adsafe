@@ -23,9 +23,11 @@ function adsafe_rules(): array {
       // 해당 버전의 룰 + 택소노미 정보 조인
       $stmt = $pdo->prepare("
         SELECT 
+          r.rule_id,
+          r.rule_type AS ruleType,
+          r.condition_json,
           r.risk_code AS riskCode,
           r.rule_name AS ruleName,
-          r.rule_type AS ruleType,
           r.pattern,
           COALESCE(r.severity_override, t.default_risk_level, 'medium') AS riskLevel,
           COALESCE(r.explanation_template, t.description, '') AS explanation,
@@ -41,15 +43,35 @@ function adsafe_rules(): array {
       $dbRules = $stmt->fetchAll();
       
       if (!empty($dbRules)) {
-        $rules = [];
+        $list = [];
         foreach ($dbRules as $row) {
-          // pattern을 keywords와 regex로 파싱
+          $ruleType = $row['ruleType'] ?? 'keyword';
+          $ruleId = isset($row['rule_id']) ? (int)$row['rule_id'] : null;
+          $base = [
+            'rule_id' => $ruleId,
+            'riskCode' => $row['riskCode'],
+            'level1' => $row['level1'],
+            'level2' => $row['level2'],
+            'level3' => $row['level3'],
+            'riskLevel' => $row['riskLevel'],
+            'explanation' => $row['explanation'],
+            'suggestion' => $row['suggestion'],
+          ];
+          if ($ruleType === 'numeric' || $ruleType === 'combo') {
+            $condJson = $row['condition_json'] ?? null;
+            $condition = is_string($condJson) ? json_decode($condJson, true) : $condJson;
+            $base['rule_type'] = $ruleType;
+            $base['condition'] = is_array($condition) ? $condition : [];
+            $base['keywords'] = [];
+            $base['regex'] = [];
+            $list[] = $base;
+            continue;
+          }
+          // keyword / regex: pattern을 keywords와 regex로 파싱
           $pattern = $row['pattern'] ?? '';
           $keywords = [];
           $regex = [];
-          
           if ($pattern !== '') {
-            // "regex: " 부분 분리
             if (strpos($pattern, 'regex:') !== false) {
               $parts = explode('|', $pattern);
               foreach ($parts as $part) {
@@ -62,27 +84,16 @@ function adsafe_rules(): array {
                 }
               }
             } else {
-              // 전부 키워드
               $keywords = array_map('trim', explode(',', $pattern));
             }
           }
-          
-          // 빈 값 제거
-          $keywords = array_filter($keywords, fn($k) => $k !== '');
-          $regex = array_filter($regex, fn($r) => $r !== '');
-          
-          $rules[] = [
-            'riskCode' => $row['riskCode'],
-            'level1' => $row['level1'],
-            'level2' => $row['level2'],
-            'level3' => $row['level3'],
-            'riskLevel' => $row['riskLevel'],
-            'keywords' => array_values($keywords),
-            'regex' => array_values($regex),
-            'explanation' => $row['explanation'],
-            'suggestion' => $row['suggestion'],
-          ];
+          $keywords = array_values(array_filter($keywords, fn($k) => $k !== ''));
+          $regex = array_values(array_filter($regex, fn($r) => $r !== ''));
+          $base['keywords'] = $keywords;
+          $base['regex'] = $regex;
+          $list[] = $base;
         }
+        $rules = ['rule_set_version_id' => $versionId, 'rules' => $list];
         return $rules;
       }
     }
@@ -91,19 +102,24 @@ function adsafe_rules(): array {
     error_log('adsafe_rules DB error: ' . $e->getMessage());
   }
 
-  // 2) Fallback: 정적 JSON 파일
+  // 2) Fallback: 정적 JSON 파일 (rule_set_version_id 없음)
   $path = __DIR__ . '/rules_data.json';
   if (!file_exists($path)) {
-    $rules = [];
+    $rules = ['rule_set_version_id' => null, 'rules' => []];
     return $rules;
   }
   $raw = file_get_contents($path);
   if ($raw === false) {
-    $rules = [];
+    $rules = ['rule_set_version_id' => null, 'rules' => []];
     return $rules;
   }
   $decoded = json_decode($raw, true);
-  $rules = is_array($decoded) ? $decoded : [];
+  $list = is_array($decoded) ? $decoded : [];
+  // fallback 룰에 rule_id 없음; keyword/regex 형태만 가정
+  foreach ($list as $i => $r) {
+    if (!isset($r['rule_id'])) $list[$i]['rule_id'] = null;
+  }
+  $rules = ['rule_set_version_id' => null, 'rules' => $list];
   return $rules;
 }
 

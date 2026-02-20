@@ -62,7 +62,7 @@
                 .then(function(data) {
                     var questions = data.questions || [];
                     if (questions.length === 0) {
-                        alert('문제가 없습니다. 시드(npm run seed)를 먼저 실행해 주세요.');
+                        alert('문제가 없습니다. 시드(php api/scripts/seed.php)를 먼저 실행해 주세요.');
                         window.location.href = 'adusafe-menu.html';
                         return;
                     }

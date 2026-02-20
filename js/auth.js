@@ -8,11 +8,12 @@
         if (window.ADSAFE_API_URL) {
             return window.ADSAFE_API_URL.replace(/\/$/, '');
         }
-        // 자동 감지: /AdSafe/ 경로면 /AdSafe 사용
-        if (window.location && window.location.pathname && window.location.pathname.indexOf('/AdSafe/') === 0) {
-            return '/AdSafe';
+        // 자동 감지: 경로 첫 세그먼트 사용 (대소문자 무관 — /Adsafe/ 또는 /AdSafe/ 모두 동작)
+        var p = window.location && window.location.pathname;
+        if (p && p !== '/') {
+            var m = p.match(/^(\/[^\/]+)/);
+            if (m) return m[1];
         }
-        // 기본값
         return '';
     }
 

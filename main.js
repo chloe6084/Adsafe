@@ -2,7 +2,13 @@
 // API는 Apache 80 포트 기준 동일 호스트에서 동작(PHP).
 // 기본 설치 경로가 /AdSafe 이므로, 별도 설정이 없으면 자동으로 /AdSafe 를 API 베이스로 사용합니다.
 // (즉, 최종 호출: /AdSafe/api/...)
-window.ADSAFE_API_URL = window.ADSAFE_API_URL || (window.location && window.location.pathname && window.location.pathname.indexOf('/AdSafe/') === 0 ? '/AdSafe' : '');
+// API 베이스: 경로 첫 세그먼트 사용 (대소문자 무관 — /Adsafe/ 또는 /AdSafe/ 모두 동작)
+window.ADSAFE_API_URL = window.ADSAFE_API_URL || (function() {
+    var p = window.location && window.location.pathname;
+    if (!p || p === '/') return '';
+    var m = p.match(/^(\/[^\/]+)/);
+    return m ? m[1] : '';
+})();
 
 // ngrok 무료버전 경고 페이지 우회용 공통 헤더
 window.ADSAFE_FETCH_HEADERS = {
@@ -16,8 +22,8 @@ window.adsafeFetch = function(url, options) {
     return fetch(url, options);
 };
 
-// 모드 선택 카드 클릭
-document.addEventListener('DOMContentLoaded', function() {
+// DOM 준비 후 초기화 (스크립트가 body 맨 아래 로드되면 DOMContentLoaded가 이미 지났을 수 있음)
+function initAdSafe() {
     // 모드 카드 클릭 이벤트
     const modeCards = document.querySelectorAll('.mode-card');
     modeCards.forEach(card => {
@@ -70,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }).then(function(data) {
                 renderInspectionResultWithData(data, rawText);
                 if (data.saveError) {
-                    alert('검수 결과는 표시되었으나 DB 저장에 실패해 이력에 남지 않았습니다.\n\n' + (data.saveError || '') + '\n\nAPI 서버(api 폴더)에서 "node scripts/seed.js"를 실행한 뒤 다시 시도해 보세요.');
+                    alert('검수 결과는 표시되었으나 DB 저장에 실패해 이력에 남지 않았습니다.\n\n' + (data.saveError || '') + '\n\nAPI 서버(api 폴더)에서 "php api/scripts/seed.php"를 실행한 뒤 다시 시도해 보세요.');
                 }
             }).catch(function(err) {
                 alert('검수 API 연결에 실패했습니다. XAMPP Apache가 실행 중인지, 그리고 `http://localhost/AdSafe/api/health`가 열리는지 확인하세요.');
@@ -109,7 +115,13 @@ document.addEventListener('DOMContentLoaded', function() {
             // Bootstrap 모달은 Bootstrap JS가 자동 처리
         });
     });
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAdSafe);
+} else {
+    initAdSafe();
+}
 
 // 검수 결과 렌더링 (API 응답 또는 로컬 결과 객체 사용)
 function renderInspectionResultWithData(data, rawTextForDisplay) {
@@ -145,7 +157,7 @@ function renderInspectionResultWithData(data, rawTextForDisplay) {
             findingsHtml += '<div class="list-group-item border-0 px-0 py-3 ' + (idx < result.findings.length - 1 ? 'border-bottom' : '') + '">' +
                 '<div class="d-flex justify-content-between align-items-start mb-2"><div>' +
                 '<span class="badge-custom badge-' + (finding.riskLevel || 'medium') + ' me-2">' + getRiskLevelText(finding.riskLevel || 'medium') + '</span>' +
-                '<strong>' + getRiskCodeName(finding.riskCode) + '</strong></div></div>' +
+                '<strong>' + (finding.level3 || getRiskCodeName(finding.riskCode)) + '</strong></div></div>' +
                 '<p class="mb-2"><strong>매칭 표현:</strong> <mark class="highlight-risk">' + escapeHtml(finding.matchedText) + '</mark></p>' +
                 '<p class="mb-2 text-muted">' + escapeHtml(finding.explanation) + '</p>' +
                 '<p class="mb-0"><strong>수정 가이드:</strong> <span class="text-primary">' + escapeHtml(finding.suggestion) + '</span></p></div>';
@@ -159,7 +171,7 @@ function renderInspectionResultWithData(data, rawTextForDisplay) {
         recheckHtml += '<p class="text-muted small mt-2"><i class="bi bi-database me-1"></i> 검수 결과가 DB에 저장되었습니다. <a href="inspection-history.html">검수 이력</a>에서 확인할 수 있습니다.</p>';
     }
     if (data.saveError) {
-        recheckHtml += '<p class="text-warning small mt-2"><i class="bi bi-exclamation-triangle me-1"></i> DB 저장 실패: 이력에 남지 않았습니다. API 서버에서 <code>node scripts/seed.js</code> 실행 후 다시 시도하세요.</p>';
+        recheckHtml += '<p class="text-warning small mt-2"><i class="bi bi-exclamation-triangle me-1"></i> DB 저장 실패: 이력에 남지 않았습니다. API 서버에서 <code>php api/scripts/seed.php</code> 실행 후 다시 시도하세요.</p>';
     }
     resultArea.innerHTML = summaryHtml + findingsHtml + recheckHtml;
     resultArea.style.display = 'block';
@@ -177,12 +189,8 @@ function getRiskLevelText(level) {
     return map[level] || level;
 }
 
-// 리스크 코드 이름 (룰 데이터의 level3 우선, 없으면 기본 맵)
+// 리스크 코드 이름 (API의 level3는 호출부에서 우선 사용, 여기서는 fallback 맵만 사용)
 function getRiskCodeName(code) {
-    if (window.ADU_RULES && Array.isArray(window.ADU_RULES)) {
-        var rule = window.ADU_RULES.find(function(r) { return r.riskCode === code; });
-        if (rule && rule.level3) return rule.level3;
-    }
     var map = {
         'RISK_SUPERLATIVE_ABSOLUTE': '절대적 최상급', 'RISK_SUPERLATIVE_RANK': '지역/업계 1위', 'RISK_SUPERLATIVE_MARKETING': '극대화 수식어', 'RISK_SUPERLATIVE_FIRST': '최초·유일성',
         'RISK_GUARANTEE_RESULT': '완치/해결 보장', 'RISK_GUARANTEE_ZERO_RISK': '부작용 없음', 'RISK_GUARANTEE_CERTAINTY': '확정성', 'RISK_GUARANTEE_RESPONSIBILITY': '책임·약속',

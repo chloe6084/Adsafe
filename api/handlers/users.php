@@ -132,7 +132,7 @@ function handle_create_user(): void {
     // 외래키 에러 안내
     if (strpos($errorMsg, 'foreign key') !== false || strpos($errorMsg, 'FOREIGN KEY') !== false) {
       json_response([
-        'error' => 'DB 초기화가 필요합니다. "npm run seed"를 실행해 주세요.',
+        'error' => 'DB 초기화가 필요합니다. "php api/scripts/seed.php"를 실행해 주세요.',
         'detail' => $errorMsg
       ], 500);
     } else {
