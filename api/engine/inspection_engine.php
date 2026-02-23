@@ -107,12 +107,16 @@ function adsafe_inspect_run(string $rawText): array {
 
   $hasDiscountKeyword = preg_match('/\b(할인|이벤트|특가|반값|무료)\b/iu', $lower) === 1;
   $hasDiscountPercent = preg_match('/\d+\s*%\s*(할인|이벤트|오프)/iu', $lower) === 1 || preg_match('/\d+%\s*(할인|이벤트|오프)/iu', $lower) === 1;
+  // 정가→할인가(금액)가 있으면 할인율 미기재로 플래그하지 않음 (예: 300만원 → 100만원 할인)
+  $hasPricePair = preg_match('/\d+\s*만\s*원?\s*[→\-~]\s*\d+\s*만/iu', $lower) === 1
+    || preg_match('/정가\s*\d+.{0,20}할인가\s*\d+/iu', $lower) === 1
+    || preg_match('/\d+\s*만\s*원?\s*[-~]\s*\d+\s*만\s*원?/iu', $lower) === 1;
   $alreadyRisk = false;
   foreach ($findings as $f) {
     if (($f['riskCode'] ?? '') === 'RISK_PRICE_EXCESSIVE') { $alreadyRisk = true; break; }
   }
-  if ($hasDiscountKeyword && !$hasDiscountPercent && !$alreadyRisk) {
-    $addFinding('RISK_PRICE_EXCESSIVE', 'medium', '할인율 미기재', '할인 표현이 있으나 할인율이 명시되지 않았습니다.', '할인율과 이벤트 기간을 명시하세요.', '가격', '과도 할인', '할인율 미기재', true);
+  if ($hasDiscountKeyword && !$hasDiscountPercent && !$alreadyRisk && !$hasPricePair) {
+    $addFinding('RISK_PRICE_EXCESSIVE', 'medium', '할인율·금액 미명시', '할인 표현이 있으나 할인율 또는 정가·할인가(금액)가 명시되지 않았습니다.', '할인율 또는 정가→할인가(금액)와 이벤트 기간을 명시하세요.', '가격', '과도 할인', '할인율·금액 미명시', true);
   }
 
   $hasEvent = preg_match('/\b(이벤트|할인|특가|프로모션)\b/iu', $lower) === 1;
