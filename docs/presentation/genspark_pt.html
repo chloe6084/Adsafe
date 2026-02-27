@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdSafe - 의료광고 리스크를 운영체계로</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: #0F1C2E;
+            color: #E8EDF4;
+            overflow-x: hidden;
+        }
+
+        /* 슬라이드 컨테이너 */
+        #slide-viewer {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #0F1C2E 0%, #1A2E4A 100%);
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            position: relative;
+            overflow: hidden;
+            background: #0F1C2E;
+            border-radius: 16px;
+            box-shadow: 0 20px 80px rgba(0,0,0,0.5);
+        }
+
+        .slide {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: none;
+            padding: 60px 80px;
+            background: #0F1C2E;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        /* 슬라이드 네비게이션 */
+        .slide-nav {
+            position: absolute;
+            bottom: 30px;
+            right: 80px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .slide-nav button {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #E8EDF4;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Noto Sans KR', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .slide-nav button:hover {
+            background: rgba(0,200,150,0.3);
+            border-color: #00C896;
+        }
+
+        .slide-nav button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .slide-indicator {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #8FA3BE;
+        }
+
+        /* 슬라이드 공통 요소 */
+        .slide-title {
+            font-size: 56px;
+            font-weight: 900;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #00C896 0%, #00E5A0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .slide-subtitle {
+            font-size: 24px;
+            font-weight: 300;
+            color: #8FA3BE;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+
+        .slide-message {
+            font-size: 20px;
+            font-weight: 500;
+            color: #E8EDF4;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(0,200,150,0.1);
+            border-left: 4px solid #00C896;
+            border-radius: 8px;
+        }
+
+        /* 카드 스타일 */
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(0,200,150,0.3);
+            transform: translateY(-4px);
+        }
+
+        /* 뱃지 */
+        .badge {
+            display: inline-block;
+            padding: 8px 16px;
+            background: rgba(0,200,150,0.2);
+            border: 1px solid #00C896;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #00C896;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .badge.red {
+            background: rgba(255,107,107,0.2);
+            border-color: #FF6B6B;
+            color: #FF6B6B;
+        }
+
+        .badge.yellow {
+            background: rgba(255,193,7,0.2);
+            border-color: #FFC107;
+            color: #FFC107;
+        }
+
+        /* 테이블 */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .data-table th {
+            background: rgba(0,200,150,0.2);
+            color: #00C896;
+            padding: 16px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 16px;
+            border-bottom: 2px solid #00C896;
+        }
+
+        .data-table td {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            color: #E8EDF4;
+            font-size: 15px;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tr:hover {
+            background: rgba(255,255,255,0.03);
+        }
+
+        /* 그리드 레이아웃 */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 24px;
+        }
+
+        /* 파이프라인 다이어그램 */
+        .pipeline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 30px 0;
+            padding: 20px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+        }
+
+        .pipeline-step {
+            flex: 1;
+            text-align: center;
+            padding: 20px;
+            background: rgba(0,200,150,0.1);
+            border: 2px solid #00C896;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .pipeline-step:not(:last-child)::after {
+            content: '→';
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 32px;
+            color: #00C896;
+            font-weight: 700;
+        }
+
+        .pipeline-step-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #00C896;
+            margin-bottom: 8px;
+        }
+
+        .pipeline-step-desc {
+            font-size: 12px;
+            color: #8FA3BE;
+            line-height: 1.4;
+        }
+
+        /* 플로우 화살표 */
+        .flow-arrow {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .flow-item {
+            flex: 1;
+            padding: 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .flow-arrow-icon {
+            color: #00C896;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        /* 체크리스트 */
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist li {
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            background: rgba(255,255,255,0.05);
+            border-left: 4px solid #00C896;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .checklist li::before {
+            content: '✅ ';
+            margin-right: 10px;
+        }
+
+        .checklist li.warning::before {
+            content: '⚠️ ';
+        }
+
+        .checklist li.warning {
+            border-left-color: #FFC107;
+        }
+
+        /* 타임라인 */
+        .timeline {
+            display: flex;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .timeline-item {
+            flex: 1;
+            padding: 24px;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(0,200,150,0.3);
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .timeline-item:not(:last-child)::after {
+            content: '→';
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 24px;
+            color: #00C896;
+            font-weight: 700;
+            z-index: 10;
+        }
+
+        .timeline-phase {
+            display: inline-block;
+            padding: 6px 12px;
+            background: #00C896;
+            color: #0F1C2E;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .timeline-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #E8EDF4;
+            margin-bottom: 8px;
+        }
+
+        .timeline-desc {
+            font-size: 13px;
+            color: #8FA3BE;
+            line-height: 1.5;
+        }
+
+        /* 강조 박스 */
+        .highlight-box {
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(0,200,150,0.2) 0%, rgba(0,229,160,0.1) 100%);
+            border: 2px solid #00C896;
+            border-radius: 16px;
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .highlight-box-title {
+            font-size: 32px;
+            font-weight: 900;
+            color: #00C896;
+            margin-bottom: 16px;
+        }
+
+        .highlight-box-desc {
+            font-size: 18px;
+            color: #E8EDF4;
+            line-height: 1.6;
+        }
+
+        /* 코드 블록 */
+        .code-block {
+            background: #000;
+            border: 1px solid rgba(0,200,150,0.3);
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #00C896;
+            line-height: 1.6;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        /* 숫자 강조 */
+        .stat-number {
+            font-size: 48px;
+            font-weight: 900;
+            color: #00C896;
+        }
+
+        .stat-label {
+            font-size: 16px;
+            color: #8FA3BE;
+            margin-top: 8px;
+        }
+
+        /* 아이콘 스타일 */
+        .icon-large {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        /* 추가 섹션 스타일 */
+        #extra-sections {
+            max-width: 1280px;
+            margin: 80px auto;
+            padding: 60px 40px;
+            background: #1A2E4A;
+            border-radius: 16px;
+        }
+
+        .section-title {
+            font-size: 36px;
+            font-weight: 900;
+            color: #00C896;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #00C896;
+        }
+
+        .qa-item {
+            margin-bottom: 30px;
+            padding: 24px;
+            background: rgba(255,255,255,0.05);
+            border-left: 4px solid #00C896;
+            border-radius: 8px;
+        }
+
+        .qa-question {
+            font-size: 18px;
+            font-weight: 700;
+            color: #00C896;
+            margin-bottom: 12px;
+        }
+
+        .qa-answer {
+            font-size: 16px;
+            color: #E8EDF4;
+            line-height: 1.7;
+        }
+
+        .demo-step {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+
+        .demo-step-num {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            background: #00C896;
+            color: #0F1C2E;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 32px;
+            font-weight: 700;
+            margin-right: 12px;
+        }
+
+        .demo-step-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #E8EDF4;
+            margin-bottom: 8px;
+        }
+
+        .demo-step-desc {
+            font-size: 15px;
+            color: #8FA3BE;
+            line-height: 1.6;
+            margin-left: 44px;
+        }
+
+        .closing-message {
+            padding: 40px;
+            background: linear-gradient(135deg, rgba(0,200,150,0.2) 0%, rgba(0,229,160,0.1) 100%);
+            border: 2px solid #00C896;
+            border-radius: 16px;
+            text-align: center;
+            font-size: 18px;
+            line-height: 2;
+            color: #E8EDF4;
+        }
+
+        /* 반응형 (선택) */
+        @media (max-width: 1400px) {
+            .slide-container {
+                transform: scale(0.85);
+                transform-origin: top center;
+            }
+        }
+
+        /* SLIDE 1 특수 스타일 */
+        .title-slide {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            background: linear-gradient(135deg, #0F1C2E 0%, #1A2E4A 70%, #00C896 150%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .title-slide::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(0,200,150,0.3) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .title-main {
+            font-size: 72px;
+            font-weight: 900;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, #00C896 0%, #00E5A0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .title-sub {
+            font-size: 32px;
+            font-weight: 300;
+            color: #E8EDF4;
+            margin-bottom: 40px;
+        }
+
+        .title-badges {
+            margin-bottom: 60px;
+        }
+
+        .title-footer {
+            position: absolute;
+            bottom: 60px;
+            left: 80px;
+            font-size: 18px;
+            color: #8FA3BE;
+        }
+
+        /* SLIDE 2 특수 스타일 */
+        .problem-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin: 30px 0;
+        }
+
+        .problem-card {
+            padding: 30px;
+            background: rgba(255,107,107,0.1);
+            border: 2px solid #FF6B6B;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .problem-icon {
+            font-size: 56px;
+            margin-bottom: 16px;
+        }
+
+        .problem-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #FF6B6B;
+            margin-bottom: 12px;
+        }
+
+        .problem-value {
+            font-size: 32px;
+            font-weight: 900;
+            color: #E8EDF4;
+            margin-bottom: 8px;
+        }
+
+        .problem-desc {
+            font-size: 14px;
+            color: #8FA3BE;
+            line-height: 1.5;
+        }
+
+        /* SLIDE 3 특수 스타일 */
+        .mode-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .mode-card {
+            padding: 24px;
+            background: rgba(0,200,150,0.1);
+            border: 2px solid #00C896;
+            border-radius: 12px;
+        }
+
+        .mode-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background: #00C896;
+            color: #0F1C2E;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .mode-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #E8EDF4;
+            margin-bottom: 10px;
+        }
+
+        .mode-desc {
+            font-size: 14px;
+            color: #8FA3BE;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .mode-target {
+            font-size: 13px;
+            color: #00C896;
+            font-weight: 500;
+        }
+
+        .metrics-box {
+            padding: 24px;
+            background: rgba(0,200,150,0.1);
+            border: 2px solid #00C896;
+            border-radius: 12px;
+        }
+
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .metric-item:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-size: 15px;
+            color: #8FA3BE;
+        }
+
+        .metric-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #00C896;
+        }
+
+        /* 작은 파이프라인 */
+        .mini-pipeline {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 20px 0;
+        }
+
+        .mini-step {
+            flex: 1;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            text-align: center;
+            font-size: 12px;
+            color: #8FA3BE;
+        }
+
+        .mini-arrow {
+            color: #FF6B6B;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        /* 추가 유틸리티 */
+        .text-center { text-align: center; }
+        .mt-20 { margin-top: 20px; }
+        .mt-30 { margin-top: 30px; }
+        .mb-20 { margin-bottom: 20px; }
+        .mb-30 { margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+
+<div id="slide-viewer">
+    <div class="slide-container">
+        
+        <!-- SLIDE 1: 표지 -->
+        <div class="slide active title-slide" data-slide="1">
+            <div style="position: relative; z-index: 10;">
+                <div class="title-main">의료광고, 운영체계로</div>
+                <div class="title-sub">AdSafe — 의료광고 리스크를 운영체계로 바꿉니다</div>
+                <div class="title-badges">
+                    <span class="badge">의료법 제56조 기반</span>
+                    <span class="badge">리스크코드 3종</span>
+                    <span class="badge">룰셋 키워드 11개</span>
+                </div>
+                <div class="title-footer">
+                    발표자: AdSafe 팀 | 날짜: 2026-02-27 | 부트캠프 데모데이
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 2: 문제 정의 -->
+        <div class="slide" data-slide="2">
+            <div class="slide-title">검수, 매번 45분</div>
+            <div class="slide-message">의료광고 담당자는 규제 불확실성을 매일 혼자 떠안는다</div>
+            
+            <div class="problem-cards">
+                <div class="problem-card">
+                    <div class="problem-icon">⏱️</div>
+                    <div class="problem-title">시간 소요</div>
+                    <div class="problem-value">45분</div>
+                    <div class="problem-desc">건당 검수 시간<br>월 37시간 이상 소요</div>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">💸</div>
+                    <div class="problem-title">비용 리스크</div>
+                    <div class="problem-value">50~300만원</div>
+                    <div class="problem-desc">과태료 + 영업정지<br>사후 적발 시</div>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">⚠️</div>
+                    <div class="problem-title">품질 편차</div>
+                    <div class="problem-value">표준 없음</div>
+                    <div class="problem-desc">담당자별 검수 기준 편차<br>일관성 부재</div>
+                </div>
+            </div>
+
+            <div class="mini-pipeline">
+                <div class="mini-step">복잡한 규제</div>
+                <div class="mini-arrow">→</div>
+                <div class="mini-step">수동 검수</div>
+                <div class="mini-arrow">→</div>
+                <div class="mini-step">위반 리스크</div>
+                <div class="mini-arrow">→</div>
+                <div class="mini-step">과태료/영업정지</div>
+            </div>
+        </div>
+
+        <!-- SLIDE 3: 솔루션 개요 -->
+        <div class="slide" data-slide="3">
+            <div class="slide-title">AdSafe란 무엇인가</div>
+            <div class="slide-message">법령 기반 자산으로 작동하는 의료광고 자동 검수 시스템</div>
+            
+            <div class="grid-2">
+                <div>
+                    <div class="mode-cards">
+                        <div class="mode-card">
+                            <div class="mode-badge">AdSafe 모드</div>
+                            <div class="mode-title">자동 검수</div>
+                            <div class="mode-desc">광고 문구 자동 검수<br>리스크 탐지<br>수정 가이드 제공</div>
+                            <div class="mode-target">→ 대상: 마케터</div>
+                        </div>
+                    </div>
+                    <div class="mode-cards">
+                        <div class="mode-card">
+                            <div class="mode-badge">AduSafe 모드</div>
+                            <div class="mode-title">퀴즈 학습</div>
+                            <div class="mode-desc">퀴즈 기반 규제 학습<br>오답 복습 시스템</div>
+                            <div class="mode-target">→ 대상: 신입/학습자</div>
+                        </div>
+                    </div>
+                    <div class="mode-cards">
+                        <div class="mode-card">
+                            <div class="mode-badge">Admin 모드</div>
+                            <div class="mode-title">운영 관리</div>
+                            <div class="mode-desc">리스크 유형·룰·버전·사용자 관리</div>
+                            <div class="mode-target">→ 대상: 팀장/관리자</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metrics-box">
+                    <h3 style="font-size: 22px; font-weight: 700; color: #00C896; margin-bottom: 20px;">핵심 지표</h3>
+                    <div class="metric-item">
+                        <div class="metric-label">검수 시간 단축</div>
+                        <div class="metric-value">45분 → 5분</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">사전 탐지율 목표</div>
+                        <div class="metric-value">90% (추정)</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">신입 온보딩 기간</div>
+                        <div class="metric-value">6개월 → 1개월 (추정)</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-label">검수 응답 시간</div>
+                        <div class="metric-value">~500ms</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 4: 자산 로직 A -->
+        <div class="slide" data-slide="4">
+            <div class="slide-title">법령을 자산으로</div>
+            <div class="slide-message">의료법 제56조 조문을 구조화된 검수 자산으로 변환</div>
+            
+            <div class="pipeline">
+                <div class="pipeline-step">
+                    <div class="pipeline-step-title">법령 조문</div>
+                    <div class="pipeline-step-desc">의료법 제56조<br>제2항 2·3·8호</div>
+                </div>
+                <div class="pipeline-step">
+                    <div class="pipeline-step-title">검수 기준화</div>
+                    <div class="pipeline-step-desc">금지 표현 유형<br>분류</div>
+                </div>
+                <div class="pipeline-step">
+                    <div class="pipeline-step-title">리스크코드 분류</div>
+                    <div class="pipeline-step-desc">RISK_xxx<br>체계화</div>
+                </div>
+                <div class="pipeline-step">
+                    <div class="pipeline-step-title">룰셋 키워드</div>
+                    <div class="pipeline-step-desc">패턴 등록<br>keyword/regex</div>
+                </div>
+                <div class="pipeline-step">
+                    <div class="pipeline-step-title">문구 탐지 결과</div>
+                    <div class="pipeline-step-desc">findings 반환<br>+ 수정 가이드</div>
+                </div>
+            </div>
+
+            <div class="highlight-box" style="margin-top: 40px;">
+                <div style="display: flex; justify-content: space-around; align-items: center;">
+                    <div>
+                        <div class="stat-number">3</div>
+                        <div class="stat-label">법령 근거 조항</div>
+                    </div>
+                    <div>
+                        <div class="stat-number">3</div>
+                        <div class="stat-label">리스크코드 종류</div>
+                    </div>
+                    <div>
+                        <div class="stat-number">11</div>
+                        <div class="stat-label">키워드 샘플</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 5: 자산 로직 B -->
+        <div class="slide" data-slide="5">
+            <div class="slide-title">리스크코드 3종 체계</div>
+            <div class="slide-message">3개 조항 → 3개 리스크코드 → 11개 키워드 샘플로 이어지는 매핑 체계</div>
+            
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>법령 조문</th>
+                        <th>금지 표현 예시</th>
+                        <th>리스크코드</th>
+                        <th>키워드 샘플</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>의료법 제56조<br>제2항 2호</td>
+                        <td>최상급 절대적 표현</td>
+                        <td><strong>RISK_SUPERLATIVE_ABSOLUTE</strong></td>
+                        <td>최고, 유일, 최대, 완벽</td>
+                    </tr>
+                    <tr>
+                        <td>의료법 제56조<br>제2항 3호</td>
+                        <td>순위/대표성 주장</td>
+                        <td><strong>RISK_SUPERLATIVE_RANK</strong></td>
+                        <td>1위, 1등, 대표, 최다</td>
+                    </tr>
+                    <tr>
+                        <td>의료법 제56조<br>제2항 8호</td>
+                        <td>치료결과 단정 표현</td>
+                        <td><strong>RISK_GUARANTEE_RESULT</strong></td>
+                        <td>완치, 해결, 개선 완료</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="code-block">
+LOAD active ruleset version<br>
+FOR each rule:<br>
+&nbsp;&nbsp;IF rule.type == 'keyword': match comma-separated keywords<br>
+&nbsp;&nbsp;IF rule.type == 'regex':   match pattern<br>
+&nbsp;&nbsp;→ findings[] 추가<br>
+SET summary.level = max(findings.riskLevel)<br>
+SAVE to inspection_runs + inspection_findings
+            </div>
+        </div>
+
+        <!-- SLIDE 6: 차별점 비교 -->
+        <div class="slide" data-slide="6">
+            <div class="slide-title">단순 AI와 무엇이 다른가</div>
+            <div class="slide-message">AdSafe는 근거 있고, 재현 가능하고, 감사 추적이 된다</div>
+            
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">비교 항목</th>
+                        <th style="width: 37.5%;">단순 AI 방식</th>
+                        <th style="width: 37.5%;">AdSafe 자산 기반 방식</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>근거성</strong></td>
+                        <td>확률적 응답, 근거 불명확</td>
+                        <td style="color: #00C896; font-weight: 700;">의료법 제56조 조문 직접 매핑</td>
+                    </tr>
+                    <tr>
+                        <td><strong>재현성</strong></td>
+                        <td>동일 입력 → 다른 출력 가능</td>
+                        <td style="color: #00C896; font-weight: 700;">동일 룰셋 → 동일 결과 보장</td>
+                    </tr>
+                    <tr>
+                        <td><strong>운영가능성</strong></td>
+                        <td>프롬프트 의존, 관리 어려움</td>
+                        <td style="color: #00C896; font-weight: 700;">Admin에서 룰·버전 직접 관리</td>
+                    </tr>
+                    <tr>
+                        <td><strong>감사추적성</strong></td>
+                        <td>결과 로그 없음</td>
+                        <td style="color: #00C896; font-weight: 700;">inspection_runs DB 저장, 이력 조회</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box" style="margin-top: 30px;">
+                <div class="highlight-box-desc">
+                    <strong style="color: #00C896; font-size: 24px;">"AdSafe는 검수 결과를 설명할 수 있는 유일한 시스템입니다"</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 7: 데모 -->
+        <div class="slide" data-slide="7">
+            <div class="slide-title">2분 데모 시나리오</div>
+            <div class="slide-message">광고 문구 입력 → 리스크 탐지 → 수정 가이드까지 2분</div>
+            
+            <div style="display: grid; gap: 16px;">
+                <div class="card">
+                    <strong style="color: #00C896;">Step 1</strong> — 로그인 (마케터 계정)
+                </div>
+                <div class="card">
+                    <strong style="color: #00C896;">Step 2</strong> — [검수하기] 클릭 → 문구 입력: <span style="color: #FF6B6B;">"최고의 병원, 완치 보장"</span>
+                </div>
+                <div class="card">
+                    <strong style="color: #00C896;">Step 3</strong> — 검수 결과 확인<br>
+                    <div style="margin-top: 12px; padding: 12px; background: rgba(255,107,107,0.1); border-left: 4px solid #FF6B6B; border-radius: 4px;">
+                        <strong style="color: #FF6B6B;">위험도: 높음 / 적발 2건</strong><br>
+                        <div style="margin-top: 8px; font-size: 14px;">
+                            • RISK_SUPERLATIVE_ABSOLUTE: "최고" 매칭<br>
+                            • RISK_GUARANTEE_RESULT: "완치 보장" 매칭
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <strong style="color: #00C896;">Step 4</strong> — 수정 가이드 확인<br>
+                    <div style="margin-top: 8px; font-size: 14px; color: #8FA3BE;">
+                        "최고" → 삭제 또는 수치로 대체<br>
+                        "완치 보장" → 삭제 (치료 결과 단정 표현 금지)
+                    </div>
+                </div>
+                <div class="card">
+                    <strong style="color: #00C896;">Step 5</strong> — [검수 이력] → 이전 기록 조회 확인
+                </div>
+            </div>
+
+            <div style="position: absolute; bottom: 80px; right: 80px; padding: 12px 20px; background: rgba(0,200,150,0.2); border: 2px solid #00C896; border-radius: 8px;">
+                <strong style="color: #00C896; font-size: 18px;">응답 시간: ~500ms</strong>
+            </div>
+        </div>
+
+        <!-- SLIDE 8: 기술 스택 & 아키텍처 -->
+        <div class="slide" data-slide="8">
+            <div class="slide-title">기술 스택 & 구조</div>
+            <div class="slide-message">경량 풀스택 + 클라우드 DB로 즉시 운영 가능한 구조</div>
+            
+            <div class="grid-2">
+                <div>
+                    <div class="card" style="margin-bottom: 20px;">
+                        <h3 style="color: #00C896; font-size: 18px; margin-bottom: 16px;">아키텍처 (3레이어)</h3>
+                        <div style="padding: 16px; background: rgba(0,0,0,0.3); border-radius: 8px; font-size: 14px; line-height: 1.8;">
+                            <strong style="color: #00C896;">Frontend</strong><br>
+                            HTML5 / CSS3 / JavaScript (ES6+)<br>
+                            Bootstrap 5<br><br>
+                            
+                            <strong style="color: #00C896;">Backend</strong><br>
+                            PHP 8.x / Apache (XAMPP)<br>
+                            REST API (JSON)<br><br>
+                            
+                            <strong style="color: #00C896;">Database</strong><br>
+                            MySQL 8.x (Aiven Cloud)<br>
+                            PDO Prepared Statement<br><br>
+                            
+                            <strong style="color: #00C896;">개발환경</strong><br>
+                            ngrok 터널링
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="card" style="margin-bottom: 20px;">
+                        <h3 style="color: #00C896; font-size: 18px; margin-bottom: 16px;">핵심 보안</h3>
+                        <ul class="checklist">
+                            <li>bcrypt 비밀번호 암호화</li>
+                            <li>PDO Prepared Statement (SQL Injection 방지)</li>
+                            <li>HTML Escape (XSS 방지)</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h3 style="color: #00C896; font-size: 18px; margin-bottom: 16px;">ERD 핵심 테이블</h3>
+                        <div style="font-size: 13px; color: #8FA3BE; line-height: 1.8;">
+                            • users (사용자)<br>
+                            • risk_taxonomy (리스크 분류)<br>
+                            • rule_set_versions (버전 관리)<br>
+                            • rules (검수 룰)<br>
+                            • inspection_runs (검수 이력)<br>
+                            • inspection_findings (적발 상세)<br>
+                            • quizzes / quiz_attempts (학습)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 9: 성과 & 한계 -->
+        <div class="slide" data-slide="9">
+            <div class="slide-title">성과와 현재 한계</div>
+            
+            <div class="grid-2">
+                <div>
+                    <h3 style="color: #00C896; font-size: 22px; margin-bottom: 20px;">✅ 달성 성과</h3>
+                    <ul class="checklist">
+                        <li>검수 응답 ~500ms (목표 2초 이내)</li>
+                        <li>리스크코드 3종 / 키워드 샘플 11개 구현</li>
+                        <li>Admin 룰·버전 관리 기능 완성</li>
+                        <li>퀴즈 학습 + 오답 복습 구현</li>
+                        <li>검수 이력 저장 + 조회 (필터/페이징)</li>
+                        <li>bcrypt / PDO / XSS 보안 구현</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h3 style="color: #FFC107; font-size: 22px; margin-bottom: 20px;">⚠️ 한계 및 개선 필요</h3>
+                    <ul class="checklist">
+                        <li class="warning">감사 로그: localStorage 수준 (DB 이전 필요)</li>
+                        <li class="warning">비밀번호 재설정 미구현</li>
+                        <li class="warning">이미지/영상 광고 검수 미지원</li>
+                        <li class="warning">법적 효력 없음 (참고용 도구)</li>
+                        <li class="warning">키워드 11개 → 실무 확장 필요 (추정)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 10: 로드맵 & 클로징 -->
+        <div class="slide" data-slide="10">
+            <div class="slide-title">다음 단계와 확장</div>
+            <div class="slide-message">법령 모니터링 → 자산 고도화 → 서비스 확장 → 데이터 플라이휠</div>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-phase">Phase 1</div>
+                    <div class="timeline-title">법령 모니터링</div>
+                    <div class="timeline-desc">관련 법령 페이지 일 1회 크롤링 + 개정 감지 시 Slack 알림</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-phase">Phase 2</div>
+                    <div class="timeline-title">자산 고도화</div>
+                    <div class="timeline-desc">변경 조문/사례 반영 → 리스크코드·룰셋 주기적 업데이트</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-phase">Phase 3</div>
+                    <div class="timeline-title">서비스 확장</div>
+                    <div class="timeline-desc">광고문구 제작 지원 + 의료심의 준비 및 프로세스 지원</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-phase">Phase 4</div>
+                    <div class="timeline-title">데이터 플라이휠</div>
+                    <div class="timeline-desc">심의 데이터 축적 → 법령기반 + 실무사례기반 이중 고도화</div>
+                </div>
+            </div>
+
+            <div class="highlight-box" style="margin-top: 30px;">
+                <div class="highlight-box-title">의료광고 리스크를 운영체계로 바꿉니다.</div>
+                <div class="highlight-box-desc">AdSafe입니다.</div>
+            </div>
+
+            <div style="position: absolute; bottom: 80px; left: 80px; right: 80px; padding: 20px; background: rgba(0,200,150,0.1); border: 1px solid rgba(0,200,150,0.3); border-radius: 8px; font-size: 15px; line-height: 1.8; color: #E8EDF4;">
+                "이번 생성형 AI 활용 오피스 엔지니어 클래스를 통해 AI 자동화와 실무 설계 역량을 동시에 배울 수 있었습니다. 배운 것을 AdSafe에 직접 적용하면서, 단순 기능 구현을 넘어 운영 가능한 체계를 설계하는 것이 진짜 엔지니어링임을 배웠습니다. AdSafe는 그 첫 번째 결과물입니다. 감사합니다."
+            </div>
+        </div>
+
+        <!-- 슬라이드 네비게이션 -->
+        <div class="slide-nav">
+            <button id="prevBtn" onclick="changeSlide(-1)">◀ 이전</button>
+            <div class="slide-indicator">
+                <span id="currentSlide">1</span> / <span id="totalSlides">10</span>
+            </div>
+            <button id="nextBtn" onclick="changeSlide(1)">다음 ▶</button>
+        </div>
+
+    </div>
+</div>
+
+<!-- 추가 섹션 -->
+<div id="extra-sections">
+    
+    <!-- 섹션 A: 2분 데모 시나리오 -->
+    <section style="margin-bottom: 80px;">
+        <h2 class="section-title">📺 2분 데모 시나리오 (상세)</h2>
+        
+        <div class="demo-step">
+            <div class="demo-step-title">
+                <span class="demo-step-num">1</span>
+                로그인 (마케터 계정)
+            </div>
+            <div class="demo-step-desc">
+                <strong>클릭 순서:</strong> login.html → 이메일/비밀번호 입력 → "로그인" 버튼<br>
+                <strong>보여줄 포인트:</strong> Editor 권한으로 로그인, 메인 대시보드 진입
+            </div>
+        </div>
+
+        <div class="demo-step">
+            <div class="demo-step-title">
+                <span class="demo-step-num">2</span>
+                검수 시작
+            </div>
+            <div class="demo-step-desc">
+                <strong>클릭 순서:</strong> 상단 메뉴 "검수하기" → adsafe.html 진입<br>
+                <strong>보여줄 포인트:</strong> 광고 유형 선택 (선택 사항), 광고 제목 입력 (선택 사항)<br>
+                <strong>문구 입력:</strong> "최고의 병원, 완치 보장, 50% 할인 이벤트" → "검수하기" 버튼 클릭
+            </div>
+        </div>
+
+        <div class="demo-step">
+            <div class="demo-step-title">
+                <span class="demo-step-num">3</span>
+                검수 결과 확인
+            </div>
+            <div class="demo-step-desc">
+                <strong>보여줄 포인트:</strong><br>
+                • 요약 위험도: <span style="color: #FF6B6B; font-weight: 700;">높음</span> (high)<br>
+                • 총 적발 건수: 2건<br>
+                • 적발 1: RISK_SUPERLATIVE_ABSOLUTE — "최고" 매칭 (위험도: 높음)<br>
+                • 적발 2: RISK_GUARANTEE_RESULT — "완치 보장" 매칭 (위험도: 높음)<br>
+                • 각 적발에 법령 근거, 설명, 수정 가이드 표시<br>
+                <strong>강조:</strong> 응답 시간 ~500ms 실측
+            </div>
+        </div>
+
+        <div class="demo-step">
+            <div class="demo-step-title">
+                <span class="demo-step-num">4</span>
+                수정 가이드 확인
+            </div>
+            <div class="demo-step-desc">
+                <strong>보여줄 포인트:</strong><br>
+                • "최고" → 삭제 또는 구체적 수치로 대체 (예: "10년 경력")<br>
+                • "완치 보장" → 삭제 (치료 결과 단정 표현 금지)<br>
+                • 각 가이드는 법령 조문과 1:1 매핑된 근거 기반
+            </div>
+        </div>
+
+        <div class="demo-step">
+            <div class="demo-step-title">
+                <span class="demo-step-num">5</span>
+                검수 이력 조회
+            </div>
+            <div class="demo-step-desc">
+                <strong>클릭 순서:</strong> 상단 메뉴 "검수 이력" → inspection-history.html<br>
+                <strong>보여줄 포인트:</strong> 이전 검수 기록 목록, 필터 기능 (광고 유형, 위험도, 날짜), 페이징, "상세보기" 클릭 시 inspection-detail.html로 이동해 전체 적발 내역 재확인 가능
+            </div>
+        </div>
+    </section>
+
+    <!-- 섹션 B: 예상 Q&A -->
+    <section style="margin-bottom: 80px;">
+        <h2 class="section-title">💬 예상 Q&A (8개)</h2>
+
+        <div class="qa-item">
+            <div class="qa-question">Q1: 검수 정확도는 어떻게 검증했나요?</div>
+            <div class="qa-answer">
+                MVP 단계에서는 의료법 제56조 기반 3개 리스크코드와 11개 키워드 샘플로 구성된 룰셋을 적용했습니다. 정확도 검증은 실제 의료광고 샘플 테스트를 통해 진행 중이며, 향후 실무 사례 데이터를 축적해 정밀도를 개선할 예정입니다. 현재는 참고용 도구이며, 최종 판단은 사용자 책임입니다.
+            </div>
+        </div>
+
+        <div class="qa-item">
+            <div class="qa-question">Q2: 법적 책임은 누가 지나요?</div>
+            <div class="qa-answer">
+                AdSafe는 참고용 자동 검수 도구이며, 검수 결과에 법적 효력은 없습니다. 최종 광고 집행 및 규제 준수에 대한 책임은 사용자(광고주 또는 대행사)에게 있습니다. 필요시 공식 심의 기관에 문의하시기 바랍니다.
+            </div>
+        </div>
+
+        <div class="qa-item">
+            <div class="qa-question">Q3: 법령이 개정되면 어떻게 대응하나요?</div>
+            <div class="qa-answer">
+                로드맵 Phase 1에서 관련 법령 페이지를 매일 1회 크롤링해 개정을 자동 감지하고, Slack으로 알림을 보낼 예정입니다. 감지된 변경 사항은 관리자가 Admin 모드에서 리스크코드와 룰셋을 직접 업데이트하며, 버전 관리 시스템을 통해 이력을 추적합니다.
+            </div>
+        </div>
+
+        <div class="qa-item">
+            <div class="qa-question">Q4: 단순 키워드 매칭이라면 우회가 가능하지 않나요?</div>
+            <div class="qa-answer">
+                맞습니다. 현재는 keyword와 regex 방식으로 작동하며, 의도적 띄어쓰기나 동의어 우회는 탐지하기 어렵습니다. 이는 MVP 한계이며, 향후 NLP 기반 의미 분석 및 동의어 사전 확장으로 고도화할 계획입니다. 하지만 법령 기반 근거와 감사 추적성은 단순 AI 방식보다 훨씬 우수합니다.
+            </div>
+        </div>
+
+        <div class="qa-item">
+            <div class="qa-question">Q5: 확장성—다른 업종에도 적용 가능한가요?</div>
+            <div class="qa-answer">
+                기술적으로는 가능합니다. 리스크 분류 체계와 룰셋 구조는 다른 규제 업종(금융, 식품 등)에도 적용할 수 있습니다. 다만 각 업종별 법령 해석과 데이터 자산화 작업이 필요하므로, 당장은 의료광고에 집중하고 추후 확장을 검토할 예정입니다.
+            </div>
+        </div>
+
+        <div class="qa-item">
+            <div class="qa-question">Q6: 운영성—룰을 계속 업데이트하는 데 비용이 얼마나 드나요?</div>
+            <div class="qa-answer">
+                Admin 모드를 통해 관리자가 직접 룰과 버전을 관리할 수 있어, 외부 의뢰 비용은 들지 않습니다. 법령 모니터링 자동화(Phase 1)를 구현하면 대부분의 업데이트는 시스템이 감지하고, 관리자는 변경 사항을 검토 후 반영하는 방식으로 운영 부담을 최소화할 수 있습니다.
+            </div>
+        </div>
+
+        <div class="qa-item">
+            <div class="qa-question">Q7: 경쟁 서비스 대비 차별점은 무엇인가요?</div>
+            <div class="qa-answer">
+                대부분의 경쟁 서비스는 LLM 기반 확률적 응답이거나, 단순 키워드 필터 수준입니다. AdSafe는 의료법 제56조 조문을 직접 해석해 리스크코드와 룰셋으로 자산화했으며, 근거성·재현성·감사추적성이 보장됩니다. 또한 Admin 모드를 통해 팀 내부에서 룰을 직접 관리할 수 있어 운영 자율성이 높습니다.
+            </div>
+        </div>
+
+        <div class="qa-item">
+            <div class="qa-question">Q8: 현재 실제 사용자가 있나요?</div>
+            <div class="qa-answer">
+                MVP 단계로, 현재는 부트캠프 개인 프로젝트입니다. 실제 의료기관 또는 광고 대행사를 대상으로 파일럿 테스트를 진행할 계획이며, 피드백을 통해 룰셋과 기능을 고도화한 뒤 정식 서비스로 전환할 예정입니다.
+            </div>
+        </div>
+    </section>
+
+    <!-- 섹션 C: 마지막 클로징 멘트 -->
+    <section>
+        <h2 class="section-title">🎤 마지막 20초 클로징 멘트</h2>
+        <div class="closing-message">
+            이번 <strong>생성형 AI 활용 오피스 엔지니어 클래스</strong>를 통해<br>
+            AI 활용과 자동화, 그리고 실무에서 바로 쓸 수 있는 설계 역량을 배울 수 있어서 정말 좋았습니다.<br>
+            <br>
+            AdSafe는 그 배움을 직접 제품으로 만든 결과물입니다.<br>
+            <br>
+            <strong style="color: #00C896; font-size: 22px;">법령을 자산으로, 리스크를 체계로 — AdSafe였습니다.</strong><br>
+            <br>
+            감사합니다.
+        </div>
+    </section>
+
+</div>
+
+<script>
+    let currentSlideIndex = 1;
+    const totalSlides = 10;
+
+    function updateSlideDisplay() {
+        const slides = document.querySelectorAll('.slide');
+        slides.forEach((slide, index) => {
+            slide.classList.remove('active');
+            if (index + 1 === currentSlideIndex) {
+                slide.classList.add('active');
+            }
+        });
+
+        document.getElementById('currentSlide').textContent = currentSlideIndex;
+        document.getElementById('totalSlides').textContent = totalSlides;
+
+        // 버튼 상태
+        document.getElementById('prevBtn').disabled = currentSlideIndex === 1;
+        document.getElementById('nextBtn').disabled = currentSlideIndex === totalSlides;
+    }
+
+    function changeSlide(direction) {
+        currentSlideIndex += direction;
+        if (currentSlideIndex < 1) currentSlideIndex = 1;
+        if (currentSlideIndex > totalSlides) currentSlideIndex = totalSlides;
+        updateSlideDisplay();
+    }
+
+    // 키보드 네비게이션
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowLeft') {
+            changeSlide(-1);
+        } else if (e.key === 'ArrowRight') {
+            changeSlide(1);
+        }
+    });
+
+    // 초기화
+    updateSlideDisplay();
+</script>
+
+</body>
+</html>

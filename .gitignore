@@ -22,3 +22,6 @@ Thumbs.db
 dist/
 build/
 .cache/
+
+# runtime monitor state
+api/storage/*.json

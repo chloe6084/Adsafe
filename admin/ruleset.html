@@ -82,6 +82,59 @@
                     </button>
                 </div>
 
+                <div class="card-custom p-3 mb-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <div>
+                            <h5 class="mb-1">의료법 개정 모니터링</h5>
+                            <p class="text-muted mb-0 small">법령 버전/개정일을 점검하고 변경 시 Slack Webhook으로 알림을 전송합니다.</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-custom btn-sm" id="btn-law-save">설정 저장</button>
+                            <button class="btn btn-primary-custom btn-sm" id="btn-law-check">지금 점검</button>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-lg-8">
+                            <label class="form-label">모니터링 URL</label>
+                            <input type="url" id="law-monitor-url" class="form-control form-control-custom" placeholder="https://www.law.go.kr/..." />
+                        </div>
+                        <div class="col-lg-4">
+                            <label class="form-label">모니터링 사용</label>
+                            <select id="law-monitor-enabled" class="form-select form-control-custom">
+                                <option value="true">사용</option>
+                                <option value="false">중지</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Slack Webhook URL (선택)</label>
+                            <input type="url" id="law-monitor-slack" class="form-control form-control-custom" placeholder="https://hooks.slack.com/services/..." />
+                        </div>
+                        <div class="col-md-3">
+                            <div class="small text-muted">최근 점검일</div>
+                            <div id="law-last-checked">-</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="small text-muted">최근 변경 감지일</div>
+                            <div id="law-last-changed">-</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="small text-muted">현재 개정일</div>
+                            <div id="law-last-revdate">-</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="small text-muted">Slack 설정</div>
+                            <div id="law-slack-configured">-</div>
+                        </div>
+                        <div class="col-12">
+                            <div class="small text-muted">현재 버전 문자열</div>
+                            <div id="law-last-version" style="word-break:break-all;">-</div>
+                        </div>
+                        <div class="col-12">
+                            <div id="law-monitor-status" class="small text-muted">상태를 불러오는 중...</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card-custom p-0">
                     <div class="table-responsive">
                         <table class="table table-custom mb-0">
@@ -192,6 +245,21 @@
     var tbody = document.getElementById('ruleset-tbody');
     var versionList = [];
     var ruleCountMap = {};
+    var lawMonitorState = null;
+
+    var lawEls = {
+        url: document.getElementById('law-monitor-url'),
+        enabled: document.getElementById('law-monitor-enabled'),
+        slack: document.getElementById('law-monitor-slack'),
+        lastChecked: document.getElementById('law-last-checked'),
+        lastChanged: document.getElementById('law-last-changed'),
+        lastRevDate: document.getElementById('law-last-revdate'),
+        lastVersion: document.getElementById('law-last-version'),
+        slackConfigured: document.getElementById('law-slack-configured'),
+        status: document.getElementById('law-monitor-status'),
+        btnSave: document.getElementById('btn-law-save'),
+        btnCheck: document.getElementById('btn-law-check')
+    };
 
     var statusBadge = {
         active: { label: '활성', class: 'bg-success' },
@@ -228,6 +296,116 @@
             if (p.type === 'day') day = p.value;
         });
         return y + '.' + m + '.' + day;
+    }
+
+    function formatDateTime(dateStr) {
+        if (!dateStr) return '-';
+        var d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        return d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+    }
+
+    function setLawStatus(message, isError) {
+        if (!lawEls.status) return;
+        lawEls.status.className = isError ? 'small text-danger' : 'small text-muted';
+        lawEls.status.textContent = message;
+    }
+
+    function renderLawMonitor(state) {
+        lawMonitorState = state || null;
+        var cfg = (state && state.config) ? state.config : {};
+        if (lawEls.url && cfg.monitorUrl) lawEls.url.value = cfg.monitorUrl;
+        if (lawEls.enabled) lawEls.enabled.value = cfg.enabled === false ? 'false' : 'true';
+
+        if (lawEls.lastChecked) lawEls.lastChecked.textContent = formatDateTime(state && state.lastCheckedAt);
+        if (lawEls.lastChanged) lawEls.lastChanged.textContent = formatDateTime(state && state.lastChangedAt);
+        if (lawEls.lastRevDate) lawEls.lastRevDate.textContent = (state && state.lastRevDate) ? state.lastRevDate : '-';
+        if (lawEls.lastVersion) lawEls.lastVersion.textContent = (state && state.lastVersion) ? state.lastVersion : '-';
+        if (lawEls.slackConfigured) {
+            lawEls.slackConfigured.textContent = (cfg && cfg.slackWebhookConfigured) ? '설정됨' : '미설정';
+        }
+        if (state && state.lastError) {
+            setLawStatus('최근 오류: ' + state.lastError, true);
+        } else {
+            setLawStatus('모니터링 설정을 저장한 뒤 "지금 점검"으로 즉시 확인할 수 있습니다.', false);
+        }
+    }
+
+    function loadLawMonitorStatus() {
+        fetch(apiBase + '/api/law-monitor/status', { headers: ngrokHeaders })
+            .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+            .then(function(result) {
+                if (!result.ok) throw new Error(result.data.error || '상태 조회 실패');
+                renderLawMonitor(result.data);
+            })
+            .catch(function(err) {
+                console.error('법령 모니터링 상태 조회 실패:', err);
+                setLawStatus('상태 조회 실패: ' + (err.message || '네트워크 오류'), true);
+            });
+    }
+
+    function saveLawMonitorConfig() {
+        var btn = lawEls.btnSave;
+        if (!btn) return;
+        btn.disabled = true;
+        btn.textContent = '저장 중...';
+
+        var payload = {
+            monitorUrl: (lawEls.url && lawEls.url.value || '').trim(),
+            slackWebhookUrl: (lawEls.slack && lawEls.slack.value || '').trim(),
+            enabled: lawEls.enabled ? (lawEls.enabled.value === 'true') : true
+        };
+
+        fetch(apiBase + '/api/law-monitor/config', {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, ngrokHeaders),
+            body: JSON.stringify(payload)
+        })
+        .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+        .then(function(result) {
+            if (!result.ok) throw new Error(result.data.error || '저장 실패');
+            renderLawMonitor(result.data.state);
+            setLawStatus('모니터링 설정이 저장되었습니다. Slack URL은 보안상 다시 표시되지 않습니다.', false);
+            if (lawEls.slack) lawEls.slack.value = '';
+        })
+        .catch(function(err) {
+            setLawStatus('설정 저장 실패: ' + (err.message || '네트워크 오류'), true);
+        })
+        .finally(function() {
+            btn.disabled = false;
+            btn.textContent = '설정 저장';
+        });
+    }
+
+    function runLawMonitorCheck() {
+        var btn = lawEls.btnCheck;
+        if (!btn) return;
+        btn.disabled = true;
+        btn.textContent = '점검 중...';
+
+        fetch(apiBase + '/api/law-monitor/check', {
+            method: 'POST',
+            headers: ngrokHeaders
+        })
+        .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+        .then(function(result) {
+            if (!result.ok) throw new Error(result.data.error || '점검 실패');
+            renderLawMonitor(result.data.state);
+            if (result.data.baselineCreated) {
+                setLawStatus('초기 기준값이 저장되었습니다. 다음 변경부터 알림이 발송됩니다.', false);
+            } else if (result.data.changed) {
+                setLawStatus('변경 감지됨: 개정일 ' + (result.data.previous.revDate || '-') + ' -> ' + (result.data.current.revDate || '-') + '. Slack 전송 결과를 확인하세요.', false);
+            } else {
+                setLawStatus('변경 없음: 현재 개정일 ' + (result.data.current.revDate || '-'), false);
+            }
+        })
+        .catch(function(err) {
+            setLawStatus('점검 실패: ' + (err.message || '네트워크 오류'), true);
+        })
+        .finally(function() {
+            btn.disabled = false;
+            btn.textContent = '지금 점검';
+        });
     }
 
     // 룰셋 버전 목록 로드
@@ -467,8 +645,12 @@
         });
     });
 
+    if (lawEls.btnSave) lawEls.btnSave.addEventListener('click', saveLawMonitorConfig);
+    if (lawEls.btnCheck) lawEls.btnCheck.addEventListener('click', runLawMonitorCheck);
+
     // 초기화
     loadVersions();
+    loadLawMonitorStatus();
 })();
     </script>
 </body>

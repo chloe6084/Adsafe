@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdSafe Investor Pitch v2</title>
+    <style>
+        :root {
+            --bg: #070b14;
+            --panel: #0f1729;
+            --panel-2: #121d35;
+            --text: #e6ecff;
+            --muted: #98a7d3;
+            --line: #213054;
+            --blue: #4f8cff;
+            --blue-soft: #1d2f57;
+            --green: #20c997;
+            --amber: #f5b84f;
+            --danger: #ff5e7d;
+        }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: "Segoe UI", "Noto Sans KR", Arial, sans-serif; }
+        .deck {
+            height: 100vh;
+            overflow-y: auto;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+        .slide {
+            min-height: 100vh;
+            padding: 72px 64px 84px;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            background: radial-gradient(1200px 500px at 85% -15%, #223765 0%, transparent 60%), var(--bg);
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .slide.alt { background: linear-gradient(180deg, var(--panel) 0%, #0a1122 100%); }
+        .eyebrow {
+            display: inline-block;
+            width: fit-content;
+            font-size: 13px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #c1d3ff;
+            background: rgba(79,140,255,0.14);
+            border: 1px solid rgba(79,140,255,0.35);
+            border-radius: 999px;
+            padding: 7px 12px;
+            margin-bottom: 16px;
+        }
+        h1, h2 { margin: 0 0 14px; line-height: 1.2; letter-spacing: -0.02em; }
+        h1 { font-size: clamp(36px, 6vw, 64px); }
+        h2 { font-size: clamp(28px, 4.6vw, 48px); }
+        .lead {
+            margin: 0;
+            font-size: clamp(18px, 2.1vw, 25px);
+            color: var(--muted);
+            max-width: 980px;
+            line-height: 1.5;
+        }
+        .grid-2, .grid-3 {
+            margin-top: 26px;
+            display: grid;
+            gap: 16px;
+        }
+        .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .card {
+            border: 1px solid var(--line);
+            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+            border-radius: 16px;
+            padding: 18px;
+            min-height: 130px;
+        }
+        .card h3 {
+            margin: 0 0 8px;
+            font-size: 19px;
+            letter-spacing: -0.01em;
+        }
+        .card p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.5;
+            font-size: 15px;
+        }
+        .metric-row {
+            margin-top: 22px;
+            display: grid;
+            gap: 14px;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+        .metric {
+            border: 1px solid var(--line);
+            background: var(--panel);
+            border-radius: 14px;
+            padding: 16px;
+        }
+        .metric .k {
+            display: block;
+            font-size: 30px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.03em;
+        }
+        .metric .d {
+            display: block;
+            margin-top: 5px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+        .flow {
+            margin-top: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .step {
+            border: 1px solid var(--line);
+            background: var(--panel);
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 15px;
+        }
+        .arrow { color: #6f83b7; }
+        .tag {
+            font-size: 12px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            display: inline-block;
+            margin: 0 6px 8px 0;
+        }
+        .t-green { color: #9ff3db; background: rgba(32,201,151,0.14); border-color: rgba(32,201,151,0.35); }
+        .t-blue { color: #bfd5ff; background: rgba(79,140,255,0.16); border-color: rgba(79,140,255,0.35); }
+        .t-amber { color: #ffe5b0; background: rgba(245,184,79,0.14); border-color: rgba(245,184,79,0.34); }
+        .table {
+            margin-top: 22px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--line);
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: var(--panel-2);
+            color: #d7e2ff;
+            font-weight: 600;
+        }
+        tr:last-child td { border-bottom: none; }
+        td { color: var(--muted); }
+        .cta {
+            margin-top: 26px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .btn {
+            text-decoration: none;
+            border: 1px solid var(--line);
+            color: var(--text);
+            background: var(--panel);
+            border-radius: 10px;
+            padding: 11px 14px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .btn.primary {
+            background: linear-gradient(180deg, #4f8cff, #3877ef);
+            border-color: #3877ef;
+            color: #fff;
+        }
+        .footer {
+            position: absolute;
+            bottom: 20px;
+            left: 64px;
+            right: 64px;
+            display: flex;
+            justify-content: space-between;
+            color: #6f83b7;
+            font-size: 12px;
+        }
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            background: rgba(7,11,20,0.78);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .brand {
+            font-weight: 700;
+            font-size: 14px;
+            letter-spacing: 0.02em;
+        }
+        .spacer { flex: 1; }
+        .nav-btn {
+            border: 1px solid var(--line);
+            background: var(--panel);
+            color: var(--text);
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+        }
+        .progress {
+            height: 4px;
+            width: 170px;
+            background: #1a2748;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .progress > span {
+            display: block;
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, #4f8cff, #7eb0ff);
+            transition: width .2s ease;
+        }
+        .mono { font-family: Consolas, Menlo, monospace; font-size: 13px; color: #cad7ff; }
+        @media (max-width: 1024px) {
+            .slide { padding: 66px 22px 74px; }
+            .grid-2, .grid-3, .metric-row { grid-template-columns: 1fr; }
+            .footer { left: 22px; right: 22px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="brand">AdSafe Investor Pitch v2</div>
+        <div class="spacer"></div>
+        <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+        <button id="prev" class="nav-btn" title="이전 슬라이드">‹</button>
+        <button id="next" class="nav-btn" title="다음 슬라이드">›</button>
+    </div>
+
+    <main class="deck" id="deck">
+        <section class="slide" id="s1">
+            <span class="eyebrow">Investor + Sales Story</span>
+            <h1>의료광고 리스크를<br>운영체계로 바꿉니다</h1>
+            <p class="lead">AdSafe는 검수 도구가 아니라 <strong>Risk Ops 플랫폼</strong>입니다. 검수(AdSafe), 학습(AduSafe), 운영관리(Admin)를 하나의 루프로 연결해 사후대응을 사전예방으로 전환합니다.</p>
+            <div class="footer"><span>AdSafe | MVP 1.0</span><span>1 / 10</span></div>
+        </section>
+
+        <section class="slide alt" id="s2">
+            <span class="eyebrow">Why Now</span>
+            <h2>문제는 법조문이 아니라<br>운영 시스템의 부재입니다</h2>
+            <div class="metric-row">
+                <div class="metric"><span class="k">45분/건</span><span class="d">현재 평균 수동 검수 시간</span></div>
+                <div class="metric"><span class="k">월 37시간+</span><span class="d">팀 검수에 소모되는 시간</span></div>
+                <div class="metric"><span class="k">50~300만원</span><span class="d">위반 시 과태료 리스크 범위</span></div>
+                <div class="metric"><span class="k">6개월</span><span class="d">신입 온보딩 체감 기간</span></div>
+            </div>
+            <p class="lead" style="margin-top:18px;">담당자 역량에 의존하면 품질 편차가 커지고, 조직은 매번 같은 실수를 반복합니다.</p>
+            <div class="footer"><span>Problem Statement</span><span>2 / 10</span></div>
+        </section>
+
+        <section class="slide" id="s3">
+            <span class="eyebrow">Closed Loop Solution</span>
+            <h2>Detect + Learn + Govern</h2>
+            <div class="grid-3">
+                <div class="card">
+                    <h3>AdSafe (검수)</h3>
+                    <p>광고 문구 자동 검수, 위험도 등급화, 적발 근거와 수정 가이드 즉시 제공</p>
+                </div>
+                <div class="card">
+                    <h3>AduSafe (학습)</h3>
+                    <p>퀴즈 기반 학습과 오답 복습으로 팀의 규제 이해도를 구조적으로 상향</p>
+                </div>
+                <div class="card">
+                    <h3>Admin (운영)</h3>
+                    <p>리스크/룰 CRUD와 버전 관리로 조직 기준을 한 곳에서 통제</p>
+                </div>
+            </div>
+            <div class="flow">
+                <span class="step">문구 입력</span><span class="arrow">→</span>
+                <span class="step">리스크 탐지</span><span class="arrow">→</span>
+                <span class="step">수정 가이드</span><span class="arrow">→</span>
+                <span class="step">이력 축적</span><span class="arrow">→</span>
+                <span class="step">학습 반영</span>
+            </div>
+            <div class="footer"><span>Core Product Loop</span><span>3 / 10</span></div>
+        </section>
+
+        <section class="slide alt" id="s4">
+            <span class="eyebrow">Live Demo Story</span>
+            <h2>실행 흐름이 곧 가치입니다</h2>
+            <div class="grid-2">
+                <div class="card">
+                    <h3>Step 1. 리스크 탐지</h3>
+                    <p>문구 입력 후 2초 이내(현재 ~500ms) 결과 확인</p>
+                    <span class="tag t-blue">INS-01~03 완료</span>
+                </div>
+                <div class="card">
+                    <h3>Step 2. 실행 가능한 수정</h3>
+                    <p>검출 이유 + 대체 표현 제안으로 의사결정 속도 향상</p>
+                    <span class="tag t-green">수정 가이드 내장</span>
+                </div>
+                <div class="card">
+                    <h3>Step 3. 조직 자산화</h3>
+                    <p>검수 이력이 누적되어 재검수와 감사 대응의 근거 확보</p>
+                    <span class="tag t-amber">INS-04~06 완료</span>
+                </div>
+                <div class="card">
+                    <h3>Step 4. 역량 내재화</h3>
+                    <p>오답 복습 중심의 학습 루프로 신입 온보딩 시간 단축</p>
+                    <span class="tag t-blue">EDU-01~04 완료</span>
+                </div>
+            </div>
+            <div class="cta">
+                <a class="btn primary" href="../../adsafe.html" target="_blank" rel="noopener">AdSafe 데모 열기</a>
+                <a class="btn" href="../../adusafe-menu.html" target="_blank" rel="noopener">AduSafe 데모 열기</a>
+                <a class="btn" href="../../ai-copywriter.html" target="_blank" rel="noopener">AI 카피라이터 열기</a>
+            </div>
+            <div class="footer"><span>Demo-First Pitch</span><span>4 / 10</span></div>
+        </section>
+
+        <section class="slide" id="s5">
+            <span class="eyebrow">MVP Proof</span>
+            <h2>우리는 이미 동작하는 제품을 가지고 있습니다</h2>
+            <div class="table">
+                <table>
+                    <thead>
+                        <tr><th>분류</th><th>지표/요건</th><th>상태</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>성능</td><td>검수 응답 시간 &lt; 2초 (현재 약 500ms)</td><td>구현 완료</td></tr>
+                        <tr><td>보안</td><td>bcrypt, Prepared Statement, HTML Escape</td><td>적용 완료</td></tr>
+                        <tr><td>핵심 기능</td><td>P0 인증/검수/학습/관리 기능</td><td>완료</td></tr>
+                        <tr><td>운영</td><td>룰셋 버전 관리, 이력 조회</td><td>완료</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="lead" style="margin-top:16px;">목표 지표: 검수시간 45분→5분, 온보딩 6개월→1개월, 사전 탐지율 90%.</p>
+            <div class="footer"><span>Current Traction (Product)</span><span>5 / 10</span></div>
+        </section>
+
+        <section class="slide alt" id="s6">
+            <span class="eyebrow">Defensibility</span>
+            <h2>Moat는 기술보다 운영 깊이에서 생깁니다</h2>
+            <div class="grid-3">
+                <div class="card">
+                    <h3>규정 기반 룰 엔진</h3>
+                    <p>키워드/정규식 + 리스크 택소노미로 설명 가능한 결과 제공</p>
+                </div>
+                <div class="card">
+                    <h3>교육 데이터 루프</h3>
+                    <p>오답 패턴이 학습 품질 개선으로 이어지는 피드백 사이클</p>
+                </div>
+                <div class="card">
+                    <h3>조직별 운영 표준화</h3>
+                    <p>룰셋 버전 관리로 병원/팀별 준수 기준을 제품에 내재화</p>
+                </div>
+            </div>
+            <div class="footer"><span>Competitive Advantage</span><span>6 / 10</span></div>
+        </section>
+
+        <section class="slide" id="s7">
+            <span class="eyebrow">Business Model</span>
+            <h2>도입 장벽은 낮추고, 확장은 구조적으로</h2>
+            <div class="grid-3">
+                <div class="card">
+                    <h3>Starter</h3>
+                    <p>소규모 팀 대상 월 구독 + 기본 검수량 제공</p>
+                </div>
+                <div class="card">
+                    <h3>Team</h3>
+                    <p>룰셋 운영/학습 대시보드/사용자 관리 포함</p>
+                </div>
+                <div class="card">
+                    <h3>Enterprise</h3>
+                    <p>고급 감사로그, 커스텀 룰, 온보딩 컨설팅 결합</p>
+                </div>
+            </div>
+            <p class="lead" style="margin-top:16px;">가격 모델은 팀 라이선스 + 사용량(검수 건수) 하이브리드로 ARPU를 확장합니다.</p>
+            <div class="footer"><span>Revenue Architecture</span><span>7 / 10</span></div>
+        </section>
+
+        <section class="slide alt" id="s8">
+            <span class="eyebrow">Go-To-Market</span>
+            <h2>첫 승리 구간을 명확히 정의했습니다</h2>
+            <div class="grid-2">
+                <div class="card">
+                    <h3>초기 타깃</h3>
+                    <p>중소·중견 병원 마케팅팀, 의료광고 대행사</p>
+                </div>
+                <div class="card">
+                    <h3>진입 방식</h3>
+                    <p>4주 PoC: 기존 카피 검수 + 팀 교육 + 룰셋 세팅</p>
+                </div>
+                <div class="card">
+                    <h3>핵심 채널</h3>
+                    <p>업계 세미나/협회 제휴/레퍼런스 세일즈</p>
+                </div>
+                <div class="card">
+                    <h3>성공 KPI</h3>
+                    <p>검수시간 단축, 반복 위반 감소, 온보딩 기간 단축</p>
+                </div>
+            </div>
+            <div class="footer"><span>Customer Acquisition</span><span>8 / 10</span></div>
+        </section>
+
+        <section class="slide" id="s9">
+            <span class="eyebrow">Roadmap</span>
+            <h2>MVP 이후 12개월 확장 계획</h2>
+            <div class="table">
+                <table>
+                    <thead>
+                        <tr><th>시기</th><th>핵심 목표</th><th>주요 항목</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Q2</td><td>운영 완성도 강화</td><td>비밀번호 재설정, 감사로그 고도화, 도입 템플릿 표준화</td></tr>
+                        <tr><td>Q3</td><td>상업화 가속</td><td>팀별 리포트, 요금제 분화, 파트너 온보딩 패키지</td></tr>
+                        <tr><td>Q4</td><td>확장형 제품화</td><td>이미지/영상 검수 R&amp;D, 산업 확장 검증</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="lead" style="margin-top:14px;">Out of Scope를 명확히 유지하며, 규제 신뢰성과 판매 반복성을 먼저 확보합니다.</p>
+            <div class="footer"><span>Execution Plan</span><span>9 / 10</span></div>
+        </section>
+
+        <section class="slide alt" id="s10">
+            <span class="eyebrow">The Ask</span>
+            <h2>사전 예방형 의료광고 운영 표준,<br>AdSafe가 만들겠습니다</h2>
+            <p class="lead">오늘 제안은 단순한 기능 도입이 아닙니다. 팀의 리스크 대응 방식 자체를 업그레이드하는 제안입니다.</p>
+            <div class="grid-2">
+                <div class="card">
+                    <h3>투자자에게</h3>
+                    <p>규제 기반 SaaS의 반복 가능한 수익 모델과 확장성을 증명하겠습니다.</p>
+                </div>
+                <div class="card">
+                    <h3>도입 고객에게</h3>
+                    <p>4주 PoC로 검수 효율·일관성 개선을 수치로 입증하겠습니다.</p>
+                </div>
+            </div>
+            <div class="cta">
+                <a class="btn primary" href="../../index.html" target="_blank" rel="noopener">서비스 홈 열기</a>
+                <a class="btn" href="../../admin/users.html" target="_blank" rel="noopener">관리자 화면 열기</a>
+            </div>
+            <p style="margin-top:16px;" class="mono">발표 팁: 이 슬라이드 후 즉시 실제 데모(AdSafe 검수)로 전환하세요.</p>
+            <div class="footer"><span>Thank you</span><span>10 / 10</span></div>
+        </section>
+    </main>
+
+    <script>
+        (function () {
+            var deck = document.getElementById("deck");
+            var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+            var progress = document.getElementById("progress-bar");
+            var prev = document.getElementById("prev");
+            var next = document.getElementById("next");
+
+            function currentIndex() {
+                var y = deck.scrollTop;
+                var idx = 0;
+                for (var i = 0; i < slides.length; i++) {
+                    if (slides[i].offsetTop - 80 <= y) idx = i;
+                }
+                return idx;
+            }
+
+            function go(idx) {
+                if (idx < 0) idx = 0;
+                if (idx >= slides.length) idx = slides.length - 1;
+                slides[idx].scrollIntoView({ behavior: "smooth", block: "start" });
+                update();
+            }
+
+            function update() {
+                var idx = currentIndex();
+                var ratio = ((idx + 1) / slides.length) * 100;
+                progress.style.width = ratio + "%";
+            }
+
+            prev.addEventListener("click", function () { go(currentIndex() - 1); });
+            next.addEventListener("click", function () { go(currentIndex() + 1); });
+
+            document.addEventListener("keydown", function (e) {
+                if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") {
+                    e.preventDefault();
+                    go(currentIndex() + 1);
+                } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+                    e.preventDefault();
+                    go(currentIndex() - 1);
+                } else if (e.key === "Home") {
+                    e.preventDefault();
+                    go(0);
+                } else if (e.key === "End") {
+                    e.preventDefault();
+                    go(slides.length - 1);
+                }
+            });
+
+            deck.addEventListener("scroll", update);
+            update();
+        })();
+    </script>
+</body>
+</html>

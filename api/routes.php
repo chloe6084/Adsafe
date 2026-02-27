@@ -13,6 +13,7 @@ require_once __DIR__ . '/handlers/rules.php';
 require_once __DIR__ . '/handlers/credits.php';
 require_once __DIR__ . '/handlers/ai_generate.php';
 require_once __DIR__ . '/handlers/quiz_admin.php';
+require_once __DIR__ . '/handlers/law_monitor.php';
 
 // Normalize path: remove query string, strip API mount prefix
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
@@ -223,6 +224,19 @@ if ($method === 'DELETE' && preg_match('#^/admin/quizzes/(\d+)$#', $path, $m)) {
 
 if ($method === 'PUT' && preg_match('#^/admin/quizzes/(\d+)/toggle$#', $path, $m)) {
   handle_admin_toggle_quiz((int)$m[1]);
+}
+
+// ===== 법령 모니터링 API =====
+if ($method === 'GET' && $path === '/law-monitor/status') {
+  handle_get_law_monitor_status();
+}
+
+if ($method === 'POST' && $path === '/law-monitor/config') {
+  handle_update_law_monitor_config();
+}
+
+if ($method === 'POST' && $path === '/law-monitor/check') {
+  handle_check_law_monitor();
 }
 
 json_response(['error' => 'Not Found', 'path' => $path], 404);
